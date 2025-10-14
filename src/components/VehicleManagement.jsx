@@ -33,7 +33,7 @@ const VehicleManagement = ({
             className="btn upload-csv"
             onClick={() => fileInputRef.current.click()}
           >
-            📄 Upload CSV
+            📄 Upload
           </button>
           <input
             type="file"

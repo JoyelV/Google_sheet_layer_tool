@@ -189,7 +189,6 @@ button:disabled {
 }
 
 button:disabled::after {
-  content: '⏳';
   margin-left: 8px;
   animation: spin 1s linear infinite;
   display: inline-block;

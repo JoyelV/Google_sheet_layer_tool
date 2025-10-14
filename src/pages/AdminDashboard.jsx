@@ -12,19 +12,30 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [vehicleData, setVehicleData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalUsers: 0, limit: 10 });
+  const [filters, setFilters] = useState({ page: 1, limit: 10, role: "", status: "", search: "" });
   const storedUser = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
   // FETCH USERS
-  const fetchUsers = async () => {
+  const fetchUsers = async ({ page = 1, limit = 10, role = "", status = "", search = "" }) => {
     setLoading(true);
     try {
-      const res = await axios.get("/users");
+      const res = await axios.get(`/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(search)}`);
       console.log(res, "users");
 
-      if (res.data.success) setUsers(res.data.data.users || []);
+      if (res.data.success) {
+        setUsers(res.data.data.users || []);
+        setPagination(res.data.data.pagination || { currentPage: page, totalPages: 1, totalUsers: 0, limit });
+      } else {
+        setUsers([]);
+        setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
+        console.error("Failed to fetch users:", res.data.message);
+      }
     } catch (err) {
       console.error("Error fetching users:", err);
+      setUsers([]);
+      setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
     } finally {
       setLoading(false);
     }
@@ -35,9 +46,7 @@ const AdminDashboard = () => {
     try {
       const res = await axios.get("/vehicles/all");
       console.log("Full response:", res);
-
       const vehicles = res?.data?.data?.vehicles || res?.data?.vehicles || [];
-
       console.log("vehicles:", vehicles);
       setVehicleData(vehicles);
     } catch (err) {
@@ -47,7 +56,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(filters);
     fetchVehicles();
   }, []);
 
@@ -134,7 +143,6 @@ const AdminDashboard = () => {
       );
       const jdRetailValue = prompt("Edit JD retail value:", v.jdRetailValue);
 
-      // Basic validation
       if (
         !auctionDate ||
         !vehicleYear ||
@@ -245,73 +253,67 @@ const AdminDashboard = () => {
     }
   };
 
-  // USER CRUD (unchanged)
-const addUser = async (newUser) => {
-  try {
-    const res = await axios.post("/users", newUser);
-    if (res.data.success) {
-      await fetchUsers();
-      return { success: true };
+  // USER CRUD
+  const addUser = async (newUser) => {
+    try {
+      const res = await axios.post("/users/", newUser);
+      if (res.data.success) {
+        await fetchUsers(filters);
+        return { success: true };
+      }
+      return { success: false, message: res.data.message || "Failed to add user" };
+    } catch (err) {
+      console.error("Error adding user:", err);
+      return { success: false, message: "Server error" };
     }
-    return { success: false, message: res.data.message || "Failed to add user" };
-  } catch (err) {
-    console.error("Error adding user:", err);
-    return { success: false, message: "Server error" };
-  }
-};
+  };
 
-const editUser = async (user) => {
-  const { id, name, email, role } = user;
+  const editUser = async (user) => {
+    const { id, name, email, role } = user;
 
-  if (!name || !email || !role) {
-    return { success: false, message: "Missing fields" };
-  }
-
-  try {
-    const res = await axios.put(`/users/${id}`, { name, email, role });
-
-    if (res.data.success) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, name, email, role } : u))
-      );
-      return { success: true, message: "User updated successfully" };
-    } else {
-      return { success: false, message: res.data.message || "Failed to update user" };
+    if (!name || !email || !role) {
+      return { success: false, message: "Missing fields" };
     }
-  } catch (err) {
-    console.error("Error updating user:", err);
-    return { success: false, message: "Server error. Try again later." };
-  }
-};
 
-const toggleBlock = async (user) => {
-  try {
-    const newStatus = user.status === "active" ? "blocked" : "active";
-    const res = await axios.put(`/users/${user.id}`, { status: newStatus });
+    try {
+      const res = await axios.put(`/users/${id}`, { name, email, role });
+      if (res.data.success) {
+        await fetchUsers(filters);
+        return { success: true, message: "User updated successfully" };
+      } else {
+        return { success: false, message: res.data.message || "Failed to update user" };
+      }
+    } catch (err) {
+      console.error("Error updating user:", err);
+      return { success: false, message: "Server error. Try again later." };
+    }
+  };
 
-    if (res.data.success) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === user.id ? { ...u, status: newStatus } : u
-        )
-      );
-      return { success: true };
-    } else {
+  const toggleBlock = async (user) => {
+    try {
+      const newStatus = user.status === "active" ? "blocked" : "active";
+      const res = await axios.put(`/users/${user.id}`, { status: newStatus });
+      if (res.data.success) {
+        await fetchUsers(filters);
+        return { success: true };
+      } else {
+        return { success: false };
+      }
+    } catch (err) {
+      console.error("Error toggling user:", err);
       return { success: false };
     }
-  } catch (err) {
-    console.error("Error toggling user:", err);
-    return { success: false };
-  }
-};
+  };
 
   const deleteUser = async (id) => {
     try {
-      const deleteUser = await axios.delete(`/users/${id}`);
-      console.log(deleteUser, "deleteUser");
-      fetchUsers();
+      const res = await axios.delete(`/users/${id}`);
+      console.log(res, "deleteUser");
+      await fetchUsers(filters);
+      return { success: true };
     } catch (err) {
       console.error("Error deleting user:", err);
+      return { success: false };
     }
   };
 
@@ -340,6 +342,10 @@ const toggleBlock = async (user) => {
             deleteUser={deleteUser}
             toggleBlock={toggleBlock}
             loading={loading}
+            pagination={pagination}
+            fetchUsers={fetchUsers}
+            filters={filters}
+            setFilters={setFilters}
           />
         ) : (
           <p style={{ padding: "20px", textAlign: "center" }}>

@@ -1,8 +1,9 @@
-import React, { useState,useMemo  } from "react";
+import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { InputText } from "primereact/inputtext";
 import { Dialog } from "primereact/dialog";
-import { ProgressSpinner } from "primereact/progressspinner";
+import { Dropdown } from "primereact/dropdown";
+import axios from "../api/axiosInstance";
 import "react-toastify/dist/ReactToastify.css";
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -17,6 +18,10 @@ const UserManagement = ({
   addUser,
   editUser,
   loading,
+  pagination,
+  fetchUsers,
+  filters,
+  setFilters,
 }) => {
   const [editingRowId, setEditingRowId] = useState(null);
   const [editedUser, setEditedUser] = useState({});
@@ -27,6 +32,9 @@ const UserManagement = ({
     role: "",
     password: "",
   });
+  const [searchInput, setSearchInput] = useState("");
+  const [searchedUser, setSearchedUser] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Confirmation modal states
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
@@ -41,25 +49,84 @@ const UserManagement = ({
     password: "",
   });
 
-  const [searchText, setSearchText] = useState("");
+  // Filter options
+  const roleOptions = [
+    { label: "All Roles", value: "" },
+    { label: "Admin", value: "admin" },
+    { label: "Editor", value: "editor" },
+    { label: "Viewer", value: "viewer" },
+  ];
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 8;
+  const statusOptions = [
+    { label: "All Statuses", value: "" },
+    { label: "Active", value: "active" },
+    { label: "Blocked", value: "blocked" },
+    { label: "Deleted", value: "deleted" },
+  ];
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchText.toLowerCase())
-    );
-  }, [users, searchText]);
+  // Fetch user by ID from backend
+  const fetchUserById = async (id) => {
+    if (!id) {
+      setSearchedUser(null);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const res = await axios.get(`/users/${id}`);
+      if (res.data.success && res.data.data.user) {
+        setSearchedUser(res.data.data.user);
+      } else {
+        setSearchedUser(null);
+        toast.error("User not found");
+      }
+    } catch (err) {
+      console.error("Error fetching user by ID:", err);
+      setSearchedUser(null);
+      toast.error("Failed to fetch user");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
-  const totalPages = Math.ceil(filteredUsers.length / pageSize);
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+// Debounce search input (fetch only if > 0)
+useEffect(() => {
+  const delayDebounceFn = setTimeout(() => {
+    const id = Number(searchInput.trim());
+    if (id > 0) {
+      // Clear role and status when searching by ID
+      setFilters((prev) => ({ ...prev, role: "", status: "" }));
+      fetchUserById(id);
+    } else {
+      // If cleared or invalid, show all users again
+      setSearchedUser(null);
+      fetchUsers(filters);
+    }
+  }, 500);
+
+  return () => clearTimeout(delayDebounceFn);
+}, [searchInput]);
+
+// Handle filter changes (role, status)
+const handleFilterChange = (key, selectedOption) => {
+  // Extract the value correctly
+  const value = selectedOption?.value ?? selectedOption ?? "";
+
+  const newFilters = { ...filters, [key]: value, page: 1 };
+
+  // Clear search input when filter is used
+  setSearchInput("");
+  setSearchedUser(null);
+
+  setFilters(newFilters);
+  fetchUsers(newFilters);
+};
+
+  // Handle pagination change
+  const handlePageChange = (event, page) => {
+    const newFilters = { ...filters, page };
+    setFilters(newFilters);
+    fetchUsers(newFilters);
+  };
 
   // EDIT
   const handleEditClick = (user) => {
@@ -73,6 +140,9 @@ const UserManagement = ({
       toast.success(result.message);
       setEditingRowId(null);
       setEditedUser({});
+      if (searchInput.trim()) {
+        fetchUserById(searchInput.trim()); // Refresh searched user
+      }
     } else {
       toast.error(result?.message || "Failed to update user");
     }
@@ -135,6 +205,9 @@ const UserManagement = ({
     setConfirmDialogVisible(false);
     setSelectedUser(null);
     setConfirmAction(null);
+    if (searchInput.trim()) {
+      fetchUserById(searchInput.trim()); // Refresh searched user
+    }
   };
 
   // BLOCK/UNBLOCK
@@ -155,21 +228,25 @@ const UserManagement = ({
   // DELETE
   const handleDelete = async (user) => {
     try {
-      await deleteUser(user.id);
-      toast.success("🗑️ User deleted successfully!");
+      const result = await deleteUser(user.id);
+      if (result?.success) {
+        toast.success("🗑️ User deleted successfully!");
+        if (searchInput.trim() && user.id === Number(searchInput)) {
+          setSearchedUser(null); // Clear searched user if deleted
+        }
+      } else {
+        toast.error("Failed to delete user.");
+      }
     } catch (err) {
       console.error("Delete failed:", err);
       toast.error("❌ Failed to delete user");
     }
   };
 
-  if (loading)
+  if (loading || searchLoading)
     return (
       <div className="loading-container">
-        <ProgressSpinner
-          style={{ width: "70px", height: "70px" }}
-          strokeWidth="4"
-        />
+        <div className="spinner"></div>
         <p className="loading-text">Loading users...</p>
       </div>
     );
@@ -184,6 +261,9 @@ const UserManagement = ({
       </button>
     </div>
   );
+
+  // Determine which users to display
+  const displayUsers = searchedUser ? [searchedUser] : users;
 
   return (
     <section className="content-section">
@@ -284,16 +364,28 @@ const UserManagement = ({
       {/* User Table */}
       <div className="crud-actions">
         <h1 className="section-title">User Management</h1>
-        <div className="action-buttons">
-           <InputText
-          placeholder="Search by name or email..."
-          value={searchText}
-          onChange={(e) => {
-            setSearchText(e.target.value);
-            setCurrentPage(1); // reset to first page
-          }}
-          style={{ marginBottom: "10px", width: "250px" }}
-        />
+        <div className="action-buttons" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <InputText
+            type="number"
+            placeholder="Search by user ID..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ marginBottom: "10px", width: "250px" }}
+          />
+          <Dropdown
+            value={filters.role}
+            options={roleOptions}
+            onChange={(e) => handleFilterChange("role", e.value)}
+            placeholder="Select Role"
+            style={{ marginBottom: "10px", width: "150px" }}
+          />
+          <Dropdown
+            value={filters.status}
+            options={statusOptions}
+            onChange={(e) => handleFilterChange("status", e.value)}
+            placeholder="Select Status"
+            style={{ marginBottom: "10px", width: "150px" }}
+          />
           <button className="btn add-row" onClick={() => setShowAddModal(true)}>
             <i className="pi pi-plus" style={{ marginRight: "4px" }} /> Add
           </button>
@@ -302,11 +394,12 @@ const UserManagement = ({
 
       <p className="section-subtitle">Manage admins, editors, and viewers</p>
 
- {/* User Table */}
+      {/* User Table */}
       <div className="table-container">
         <table>
           <thead>
             <tr>
+              <th>ID</th>
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
@@ -315,39 +408,109 @@ const UserManagement = ({
             </tr>
           </thead>
           <tbody>
-            {paginatedUsers.length === 0 ? (
+            {displayUsers.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: "center" }}>
+                <td colSpan="6" style={{ textAlign: "center" }}>
                   No users found
                 </td>
               </tr>
             ) : (
-              paginatedUsers.map((u) => (
+              displayUsers.map((u) => (
                 <tr key={u.id}>
-                  <td>{editingRowId === u.id ? <InputText value={editedUser.name} onChange={(e)=>setEditedUser({...editedUser,name:e.target.value})} /> : u.name}</td>
-                  <td>{editingRowId === u.id ? <InputText value={editedUser.email} onChange={(e)=>setEditedUser({...editedUser,email:e.target.value})} /> : u.email}</td>
-                  <td>{editingRowId === u.id ? <select value={editedUser.role} onChange={(e)=>setEditedUser({...editedUser,role:e.target.value})}><option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option></select> : u.role}</td>
-                  <td>{u.status === "deleted" ? "Deleted" : u.status === "blocked" ? "Blocked" : "Active"}</td>
+                  <td>{u.id}</td>
+                  <td>
+                    {editingRowId === u.id ? (
+                      <InputText
+                        value={editedUser.name}
+                        onChange={(e) =>
+                          setEditedUser({ ...editedUser, name: e.target.value })
+                        }
+                      />
+                    ) : (
+                      u.name
+                    )}
+                  </td>
+                  <td>
+                    {editingRowId === u.id ? (
+                      <InputText
+                        value={editedUser.email}
+                        onChange={(e) =>
+                          setEditedUser({ ...editedUser, email: e.target.value })
+                        }
+                      />
+                    ) : (
+                      u.email
+                    )}
+                  </td>
+                  <td>
+                    {editingRowId === u.id ? (
+                      <select
+                        value={editedUser.role}
+                        onChange={(e) =>
+                          setEditedUser({ ...editedUser, role: e.target.value })
+                        }
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                    ) : (
+                      u.role
+                    )}
+                  </td>
+                  <td>
+                    {u.status === "deleted"
+                      ? "Deleted"
+                      : u.status === "blocked"
+                      ? "Blocked"
+                      : "Active"}
+                  </td>
                   <td style={{ display: "flex", gap: "8px" }}>
                     {editingRowId === u.id ? (
                       <>
-                        <button className="icon-btn save" onClick={handleSaveClick}><i className="pi pi-check"/></button>
-                        <button className="icon-btn cancel" onClick={handleCancelClick}><i className="pi pi-times"/></button>
+                        <button
+                          className="icon-btn save"
+                          onClick={handleSaveClick}
+                        >
+                          <i className="pi pi-check" />
+                        </button>
+                        <button
+                          className="icon-btn cancel"
+                          onClick={handleCancelClick}
+                        >
+                          <i className="pi pi-times" />
+                        </button>
                       </>
                     ) : (
                       <>
-                        <button className="icon-btn edit" onClick={() => handleEditClick(u)}><i className="pi pi-pencil"/></button>
-                        <button className="icon-btn toggle" onClick={() => openConfirmDialog(u, "block")}>{u.status === "blocked" ? <i className="pi pi-unlock"/> : <i className="pi pi-lock"/>}</button>
                         <button
-  className={`icon-btn delete ${u.status === "deleted" ? "disabled" : ""}`}
-  onClick={() => {
-    if (u.status !== "deleted") openConfirmDialog(u, "delete");
-  }}
-  disabled={u.status === "deleted"}
->
-  <i className="pi pi-trash" />
-</button>
-
+                          className="icon-btn edit"
+                          onClick={() => handleEditClick(u)}
+                        >
+                          <i className="pi pi-pencil" />
+                        </button>
+                        <button
+                          className="icon-btn toggle"
+                          onClick={() => openConfirmDialog(u, "block")}
+                        >
+                          {u.status === "blocked" ? (
+                            <i className="pi pi-unlock" />
+                          ) : (
+                            <i className="pi pi-lock" />
+                          )}
+                        </button>
+                        <button
+                          className={`icon-btn delete ${
+                            u.status === "deleted" ? "disabled" : ""
+                          }`}
+                          onClick={() => {
+                            if (u.status !== "deleted")
+                              openConfirmDialog(u, "delete");
+                          }}
+                          disabled={u.status === "deleted"}
+                        >
+                          <i className="pi pi-trash" />
+                        </button>
                       </>
                     )}
                   </td>
@@ -356,19 +519,18 @@ const UserManagement = ({
             )}
           </tbody>
         </table>
-      {/* Pagination Controls */}
-{totalPages > 1 && (
-  <Stack spacing={2} alignItems="center" sx={{ marginTop: "10px" }}>
-    <Pagination
-      count={totalPages}
-      page={currentPage}
-      onChange={(event, page) => setCurrentPage(page)}
-      color="primary"
-      shape="rounded"
-    />
-  </Stack>
-)}
-
+        {/* Pagination Controls */}
+        {!searchedUser && pagination.totalPages > 1 && (
+          <Stack spacing={2} alignItems="center" sx={{ marginTop: "10px" }}>
+            <Pagination
+              count={pagination.totalPages}
+              page={pagination.currentPage}
+              onChange={handlePageChange}
+              color="primary"
+              shape="rounded"
+            />
+          </Stack>
+        )}
       </div>
     </section>
   );
