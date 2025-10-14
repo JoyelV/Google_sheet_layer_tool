@@ -1,0 +1,31 @@
+.btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  transition: background 0.2s;
+}
+.btn.primary {
+  background: var(--color-primary);
+  color: white;
+}
+.btn.primary:hover {
+  background: darken(var(--color-primary), 10%); 
+}
+.btn.secondary {
+  background: var(--color-secondary);
+  color: white;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn.loading {
+  opacity: 0.7;
+}
+@media (max-width: var(--breakpoint-mobile)) {
+  .btn {
+    width: 100%;
+  }
+}

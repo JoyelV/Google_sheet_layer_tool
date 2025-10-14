@@ -1,24 +1,37 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard'; 
+import AdminDashboard from './pages/AdminDashboard';
+
+const ProtectedRoute = () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+  return <Outlet />;
+};
+
+const PublicRoute = () => {
+  const token = localStorage.getItem('token');
+  return token ? <Navigate to="/admin" replace /> : <Outlet />;
+};
+
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<PublicRoute />}>
+           <Route path="/" element={<Login />} />
+        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -1,0 +1,29 @@
+.toast {
+  position: fixed;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  padding: var(--spacing-sm);
+  border-radius: 4px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.toast.success {
+  background: var(--color-success);
+}
+.toast.error {
+  background: var(--color-error);
+}
+.toast button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+}
+@media (max-width: var(--breakpoint-mobile)) {
+  .toast {
+    width: calc(100% - var(--spacing-md) * 2);
+  }
+}
