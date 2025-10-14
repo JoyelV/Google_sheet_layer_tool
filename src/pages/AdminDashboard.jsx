@@ -61,123 +61,39 @@ const AdminDashboard = () => {
   }, []);
 
   // ADD VEHICLE
-  const addVehicle = async () => {
-    const auctionDate = prompt("Enter auction date (YYYY-MM-DD):");
-    const vehicleYear = prompt("Enter vehicle year:");
-    const make = prompt("Enter make:");
-    const series = prompt("Enter series:");
-    const modelNumber = prompt("Enter model number:");
-    const engine = prompt("Enter engine:");
-    const odometer = prompt("Enter odometer reading:");
-    const color = prompt("Enter color:");
-    const auctionLocation = prompt("Enter auction location:");
-    const crValue = prompt("Enter CR value:");
-    const auctionSalePrice = prompt("Enter auction sale price:");
-    const jdWholesaleValue = prompt("Enter JD wholesale value:");
-    const jdRetailValue = prompt("Enter JD retail value:");
+const addVehicle = async (formData) => {
+  try {
+    const res = await axios.post("/vehicles/insert", formData);
 
-    if (
-      !auctionDate ||
-      !vehicleYear ||
-      !make ||
-      !series ||
-      !modelNumber ||
-      !engine
-    ) {
-      return alert("Please fill all required fields!");
-    }
-
-    const newVehicle = {
-      auctionDate,
-      vehicleYear: Number(vehicleYear),
-      make,
-      series,
-      modelNumber,
-      engine,
-      odometer: Number(odometer),
-      color,
-      auctionLocation,
-      crValue,
-      auctionSalePrice: Number(auctionSalePrice),
-      jdWholesaleValue: Number(jdWholesaleValue),
-      jdRetailValue: Number(jdRetailValue),
-    };
-
-    try {
-      await axios.post("/vehicles/insert", newVehicle);
-      console.log(newVehicle, "newVehicle");
+    if (res.data?.success) {
       alert("✅ Vehicle added successfully!");
       fetchVehicles();
-    } catch (err) {
-      console.error("Error adding vehicle:", err);
-      alert("❌ Failed to add vehicle.");
+    } else {
+      alert(res.data?.message || "❌ Failed to add vehicle.");
     }
-  };
+  } catch (err) {
+    console.error("Error adding vehicle:", err.response?.data || err.message);
+    alert("❌ Failed to add vehicle.");
+  }
+};
 
-  // EDIT VEHICLE
-  const editVehicle = async (v) => {
-    try {
-      const auctionDate = prompt(
-        "Edit auction date (YYYY-MM-DD):",
-        v.auctionDate
-      );
-      const vehicleYear = prompt("Edit vehicle year:", v.vehicleYear);
-      const make = prompt("Edit make:", v.make);
-      const series = prompt("Edit series:", v.series);
-      const modelNumber = prompt("Edit model number:", v.modelNumber);
-      const engine = prompt("Edit engine:", v.engine);
-      const odometer = prompt("Edit odometer:", v.odometer);
-      const color = prompt("Edit color:", v.color);
-      const auctionLocation = prompt(
-        "Edit auction location:",
-        v.auctionLocation
-      );
-      const crValue = prompt("Edit CR value:", v.crValue);
-      const auctionSalePrice = prompt(
-        "Edit auction sale price:",
-        v.auctionSalePrice
-      );
-      const jdWholesaleValue = prompt(
-        "Edit JD wholesale value:",
-        v.jdWholesaleValue
-      );
-      const jdRetailValue = prompt("Edit JD retail value:", v.jdRetailValue);
+// EDIT VEHICLE (updated)
+const editVehicle = async (updatedVehicle) => {
+  try {
+    const { id, ...data } = updatedVehicle; 
+    const res = await axios.put(`/vehicles/${id}`, data);
 
-      if (
-        !auctionDate ||
-        !vehicleYear ||
-        !make ||
-        !series ||
-        !modelNumber ||
-        !engine
-      ) {
-        return alert("Please fill all required fields!");
-      }
-
-      const updatedVehicle = {
-        auctionDate,
-        vehicleYear: Number(vehicleYear),
-        make,
-        series,
-        modelNumber,
-        engine,
-        odometer: Number(odometer),
-        color,
-        auctionLocation,
-        crValue,
-        auctionSalePrice: Number(auctionSalePrice),
-        jdWholesaleValue: Number(jdWholesaleValue),
-        jdRetailValue: Number(jdRetailValue),
-      };
-
-      await axios.put(`/vehicles/${v.id}`, updatedVehicle);
+    if (res.data?.success) {
       alert("✅ Vehicle updated successfully!");
       fetchVehicles();
-    } catch (err) {
-      console.error("Error updating vehicle:", err);
-      alert("❌ Failed to update vehicle.");
+    } else {
+      alert(res.data?.message || "❌ Failed to update vehicle.");
     }
-  };
+  } catch (err) {
+    console.error("Error updating vehicle:", err.response?.data || err.message);
+    alert("❌ Failed to update vehicle.");
+  }
+};
 
   // DELETE VEHICLE
   const deleteVehicle = async (id) => {
@@ -214,17 +130,29 @@ const AdminDashboard = () => {
     }
   };
 
-  // LIST BULK INSERTIONS
-  const listBulkInsertions = async () => {
-    try {
-      const res = await axios.get("/vehicles/batches/list");
-      console.log("Bulk insertions:", res.data);
-      alert("✅ Check console for bulk insertions list");
-    } catch (err) {
-      console.error("Error listing bulk insertions:", err);
-      alert("❌ Failed to fetch bulk insertions");
-    }
-  };
+// LIST BULK INSERTIONS (corrected)
+const listBulkInsertions = async () => {
+  try {
+    const res = await axios.get("/vehicles/batches/list");
+    console.log("Bulk insertions:", res.data);
+
+    // ✅ Correctly extract the array
+    const list = res.data?.data || [];
+
+    // ✅ Map to consistent display structure for the UI
+    const formatted = list.map((batch) => ({
+      batchId: batch.batchId,
+      recordCount: batch.recordCount,
+      createdAt: batch.createdAt,
+      status: "Completed", // Add a static or derived value (since API doesn’t provide it)
+    }));
+
+    return formatted;
+  } catch (err) {
+    console.error("Error listing bulk insertions:", err);
+    return [];
+  }
+};
 
   // DELETE BULK INSERTION
   const deleteBulkInsertion = async (batchId) => {
@@ -241,17 +169,50 @@ const AdminDashboard = () => {
     }
   };
 
-  // GET ROW HISTORY
-  const getRowHistory = async (id) => {
-    try {
-      const res = await axios.get(`/vehicles/${id}/history`);
-      console.log(`History for vehicle ${id}:`, res.data);
-      alert("Check console for row history");
-    } catch (err) {
-      console.error("Error fetching row history:", err);
-      alert("Failed to fetch row history");
+// GET ROW HISTORY (returns parsed history with user info)
+const getRowHistory = async (id) => {
+  try {
+    const res = await axios.get(`/vehicles/${id}/history`);
+    console.log(`History for vehicle ${id}:`, res.data);
+
+    const historyArray = res.data?.history || [];
+
+    const formatted = historyArray.map((item) => ({
+      updatedAt: item.createdAt,
+      action: item.action,
+      user: {
+        name: item.user?.name || "Unknown",
+        email: item.user?.email || "N/A",
+      },
+      changes: item.newValues || {},
+    }));
+
+    return formatted;
+  } catch (err) {
+    console.error("Error fetching row history:", err);
+    return [];
+  }
+};
+
+// REVERT VEHICLE CHANGES
+const revertVehicleToHistory = async (vehicleId, historyId) => {
+  if (!window.confirm("Are you sure you want to revert this vehicle to the selected version?"))
+    return;
+
+  try {
+    const res = await axios.post(`/vehicles/${vehicleId}/revert/${historyId}`);
+
+    if (res.data?.success) {
+      alert("✅ Vehicle reverted successfully!");
+      fetchVehicles(); // Refresh table
+    } else {
+      alert(res.data?.message || "❌ Failed to revert vehicle.");
     }
-  };
+  } catch (err) {
+    console.error("Error reverting vehicle:", err.response?.data || err.message);
+    alert("❌ Failed to revert vehicle.");
+  }
+};
 
   // USER CRUD
   const addUser = async (newUser) => {
