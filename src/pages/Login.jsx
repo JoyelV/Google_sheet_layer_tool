@@ -39,11 +39,8 @@ const Login = () => {
         theme: "colored",
       });
 
-      // Redirect after 1.5s
-      setTimeout(
-        () => navigate(role === "admin" ? "/admin" : "/dashboard"),
-        1500
-      );
+      // Redirect to /admin for all roles
+      setTimeout(() => navigate("/admin"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
       toast.error(err.response?.data?.message || "Invalid credentials", {

@@ -15,7 +15,6 @@ const debounce = (func, wait) => {
 const getPageList = (current, total, maxButtons = 5) => {
   const pages = [];
   const half = Math.floor(maxButtons / 2);
-
   if (total <= maxButtons + 2) {
     for (let i = 1; i <= total; i++) pages.push(i);
   } else {
@@ -53,6 +52,7 @@ const VehicleManagement = ({
   setVehicleFilters,
   fetchVehicles,
   vehicleLoading,
+  currentUser,
 }) => {
   const fileInputRef = useRef(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -72,7 +72,11 @@ const VehicleManagement = ({
   const [locationOptions, setLocationOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
 
+  const isViewer = currentUser?.role === "viewer";
+
   useEffect(() => {
+    console.log("vehicleFilters:", vehicleFilters); // Debug log
+    console.log("vehiclePagination:", vehiclePagination); // Debug log
     if (fullVehicleData && fullVehicleData.length > 0) {
       const uniqueYears = [
         ...new Set(fullVehicleData.map((v) => v.vehicleYear).filter(Boolean)),
@@ -113,34 +117,27 @@ const VehicleManagement = ({
 
   const validateForm = (data) => {
     const errors = {};
-
-    // Helper functions
     const isValidDate = (dateString) => {
       const date = new Date(dateString);
       return !isNaN(date.getTime());
     };
-
     const isPositiveNumber = (val) =>
       val !== "" && !isNaN(val) && Number(val) >= 0;
-
     const isNonEmptyText = (val) =>
       typeof val === "string" && val.trim().length > 0;
 
-    // Date validation
     if (!isNonEmptyText(data.auctionDate)) {
       errors.auctionDate = "Auction date is required";
     } else if (!isValidDate(data.auctionDate)) {
       errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
     }
 
-    // Year validation
     if (!data.vehicleYear) {
       errors.vehicleYear = "Vehicle year is required";
     } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
       errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
     }
 
-    // Text fields
     [
       "make",
       "series",
@@ -153,7 +150,6 @@ const VehicleManagement = ({
       if (!isNonEmptyText(data[field])) errors[field] = `${field} is required`;
     });
 
-    // Numeric fields (must be >= 0)
     [
       "odometer",
       "auctionSalePrice",
@@ -312,42 +308,46 @@ const VehicleManagement = ({
   ).current;
 
   useEffect(() => {
-    debouncedFetchVehicles(vehicleFilters);
+    if (vehicleFilters) {
+      debouncedFetchVehicles(vehicleFilters);
+    }
   }, [vehicleFilters, debouncedFetchVehicles]);
 
   return (
     <section className="content-section">
-      <div className="crud-actions">
-        <h1 className="section-title">Vehicle Management</h1>
-        <div
-          className="action-buttons"
-          style={{ display: "flex", gap: "10px" }}
-        >
-          <button className="btn add-row" onClick={() => setShowAddModal(true)}>
-            ➕ Add Vehicle
-          </button>
-          <button
-            className="btn upload-csv"
-            onClick={() => fileInputRef.current.click()}
+      {!isViewer && (
+        <div className="crud-actions">
+          <h1 className="section-title">Vehicle Management</h1>
+          <div
+            className="action-buttons"
+            style={{ display: "flex", gap: "10px" }}
           >
-            📄 Upload CSV
-          </button>
-          <input
-            type="file"
-            accept=".csv"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            onChange={handleFileChange}
-          />
-          <button
-            className="btn list-batches"
-            onClick={handleListBulkInsertions}
-          >
-            📋 List Bulk
-          </button>
+            <button className="btn add-row" onClick={() => setShowAddModal(true)}>
+              ➕ Add Vehicle
+            </button>
+            <button
+              className="btn upload-csv"
+              onClick={() => fileInputRef.current.click()}
+            >
+              📄 Upload CSV
+            </button>
+            <input
+              type="file"
+              accept=".csv"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            <button
+              className="btn list-batches"
+              onClick={handleListBulkInsertions}
+            >
+              📋 List Bulk
+            </button>
+          </div>
         </div>
-      </div>
-      {isUploading && (
+      )}
+      {isUploading && !isViewer && (
         <div style={{ width: "100%", marginTop: "10px" }}>
           <div
             style={{
@@ -374,117 +374,121 @@ const VehicleManagement = ({
           </p>
         </div>
       )}
-      <p className="section-subtitle">View, Edit and Add Vehicle Details</p>
+      <p className="section-subtitle">View Vehicle Details</p>
       <div className="table-container">
-        <div
-          className="filter-bar"
-          style={{
-            display: "flex",
-            gap: "10px",
-            margin: "15px 0",
-            flexWrap: "wrap",
-          }}
-        >
-          <select
-            value={vehicleFilters.year}
-            onChange={(e) =>
-              setVehicleFilters({
-                ...vehicleFilters,
-                year: e.target.value,
-                page: 1,
-              })
-            }
-            style={{ width: "120px" }}
+        {vehicleFilters ? (
+          <div
+            className="filter-bar"
+            style={{
+              display: "flex",
+              gap: "10px",
+              margin: "15px 0",
+              flexWrap: "wrap",
+            }}
           >
-            <option value="">All Years</option>
-            {yearOptions.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-          <select
-            value={vehicleFilters.make}
-            onChange={(e) =>
-              setVehicleFilters({
-                ...vehicleFilters,
-                make: e.target.value,
-                page: 1,
-              })
-            }
-            style={{ width: "150px" }}
-          >
-            <option value="">All Makes</option>
-            {makeOptions.map((make) => (
-              <option key={make} value={make}>
-                {make}
-              </option>
-            ))}
-          </select>
-          <select
-            value={vehicleFilters.location}
-            onChange={(e) =>
-              setVehicleFilters({
-                ...vehicleFilters,
-                location: e.target.value,
-                page: 1,
-              })
-            }
-            style={{ width: "150px" }}
-          >
-            <option value="">All Locations</option>
-            {locationOptions.map((loc) => (
-              <option key={loc} value={loc}>
-                {loc}
-              </option>
-            ))}
-          </select>
-          <select
-            value={vehicleFilters.modelNumber}
-            onChange={(e) =>
-              setVehicleFilters({
-                ...vehicleFilters,
-                modelNumber: e.target.value,
-                page: 1,
-              })
-            }
-            style={{ width: "150px" }}
-          >
-            <option value="">All Models</option>
-            {modelOptions.map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
-          <select
-            value={vehicleFilters.sortBy}
-            onChange={(e) =>
-              setVehicleFilters({
-                ...vehicleFilters,
-                sortBy: e.target.value,
-                page: 1,
-              })
-            }
-          >
-            <option value="modelNumber">Sort by Model Number</option>
-            <option value="auctionDate">Sort by Date</option>
-            <option value="auctionSalePrice">Sort by Price</option>
-          </select>
-          <select
-            value={vehicleFilters.sortOrder}
-            onChange={(e) =>
-              setVehicleFilters({
-                ...vehicleFilters,
-                sortOrder: e.target.value,
-                page: 1,
-              })
-            }
-          >
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
-        </div>
+            <select
+              value={vehicleFilters.year || ""}
+              onChange={(e) =>
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  year: e.target.value,
+                  page: 1,
+                })
+              }
+              style={{ width: "120px" }}
+            >
+              <option value="">All Years</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            <select
+              value={vehicleFilters.make || ""}
+              onChange={(e) =>
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  make: e.target.value,
+                  page: 1,
+                })
+              }
+              style={{ width: "150px" }}
+            >
+              <option value="">All Makes</option>
+              {makeOptions.map((make) => (
+                <option key={make} value={make}>
+                  {make}
+                </option>
+              ))}
+            </select>
+            <select
+              value={vehicleFilters.location || ""}
+              onChange={(e) =>
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  location: e.target.value,
+                  page: 1,
+                })
+              }
+              style={{ width: "150px" }}
+            >
+              <option value="">All Locations</option>
+              {locationOptions.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+            <select
+              value={vehicleFilters.modelNumber || ""}
+              onChange={(e) =>
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  modelNumber: e.target.value,
+                  page: 1,
+                })
+              }
+              style={{ width: "150px" }}
+            >
+              <option value="">All Models</option>
+              {modelOptions.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
+            <select
+              value={vehicleFilters.sortBy || "modelNumber"}
+              onChange={(e) =>
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  sortBy: e.target.value,
+                  page: 1,
+                })
+              }
+            >
+              <option value="modelNumber">Sort by Model Number</option>
+              <option value="auctionDate">Sort by Date</option>
+              <option value="auctionSalePrice">Sort by Price</option>
+            </select>
+            <select
+              value={vehicleFilters.sortOrder || "desc"}
+              onChange={(e) =>
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  sortOrder: e.target.value,
+                  page: 1,
+                })
+              }
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </div>
+        ) : (
+          <p>Loading filters...</p>
+        )}
         <table>
           <thead>
             <tr>
@@ -501,13 +505,13 @@ const VehicleManagement = ({
               <th>Sale Price</th>
               <th>Wholesale</th>
               <th>Retail</th>
-              <th>Actions</th>
+              {!isViewer && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {vehicleLoading ? (
               <tr>
-                <td colSpan="14" style={{ textAlign: "center" }}>
+                <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
                   Loading vehicles...
                 </td>
               </tr>
@@ -527,341 +531,355 @@ const VehicleManagement = ({
                   <td>{v.auctionSalePrice}</td>
                   <td>{v.jdWholesaleValue}</td>
                   <td>{v.jdRetailValue}</td>
-                  <td style={{ display: "flex", gap: "10px" }}>
-                    <button
-                      className="icon-btn edit"
-                      onClick={() => {
-                        setEditData(v);
-                        setShowEditModal(true);
-                      }}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="icon-btn delete"
-                      onClick={() => deleteVehicle(v.id)}
-                    >
-                      🗑️
-                    </button>
-                    <button
-                      className="icon-btn history"
-                      onClick={() => handleRowHistory(v.id)}
-                    >
-                      🕒
-                    </button>
-                  </td>
+                  {!isViewer && (
+                    <td style={{ display: "flex", gap: "10px" }}>
+                      <button
+                        className="icon-btn edit"
+                        onClick={() => {
+                          setEditData(v);
+                          setShowEditModal(true);
+                        }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="icon-btn delete"
+                        onClick={() => deleteVehicle(v.id)}
+                      >
+                        🗑️
+                      </button>
+                      <button
+                        className="icon-btn history"
+                        onClick={() => handleRowHistory(v.id)}
+                      >
+                        🕒
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="14" style={{ textAlign: "center" }}>
+                <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
                   No vehicle data found
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-        <div className="pagination-container">
-          <button
-            className="pagination-btn"
-            onClick={() => {
-              if (vehiclePagination.currentPage > 1) {
-                setVehicleFilters({
-                  ...vehicleFilters,
-                  page: vehiclePagination.currentPage - 1,
-                });
-              }
-            }}
-            disabled={vehiclePagination.currentPage === 1}
-          >
-            ←
-          </button>
-          {getPageList(
-            vehiclePagination.currentPage,
-            vehiclePagination.totalPages,
-            5
-          ).map((p, idx) =>
-            p === "…" ? (
-              <span key={`el-${idx}`} className="ellipsis">
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                className={`pagination-btn ${
-                  vehiclePagination.currentPage === p ? "active" : ""
-                }`}
-                onClick={() => {
-                  setVehicleFilters({ ...vehicleFilters, page: p });
-                }}
-              >
-                {p}
-              </button>
-            )
-          )}
-          <button
-            className="pagination-btn"
-            onClick={() => {
-              if (
-                vehiclePagination.currentPage < vehiclePagination.totalPages
-              ) {
-                setVehicleFilters({
-                  ...vehicleFilters,
-                  page: vehiclePagination.currentPage + 1,
-                });
-              }
-            }}
-            disabled={
-              vehiclePagination.currentPage === vehiclePagination.totalPages
-            }
-          >
-            →
-          </button>
-        </div>
-      </div>
-      <Dialog
-        header="Add New Vehicle"
-        visible={showAddModal}
-        style={{ width: "40vw" }}
-        onHide={() => setShowAddModal(false)}
-      >
-        <div className="add-user-form">
-          {Object.keys(form).map((key) => (
-            <div className="form-group" key={key}>
-              <label>{key}</label>
-              <InputText
-                type={
-                  key.includes("Date")
-                    ? "date"
-                    : key.match(/Price|Value|odometer|Year/)
-                    ? "number"
-                    : "text"
+        {vehiclePagination ? (
+          <div className="pagination-container">
+            <button
+              className="pagination-btn"
+              onClick={() => {
+                if (vehiclePagination.currentPage > 1) {
+                  setVehicleFilters({
+                    ...vehicleFilters,
+                    page: vehiclePagination.currentPage - 1,
+                  });
                 }
-                value={form[key]}
-                onChange={(e) => {
-                  // Prevent negative input manually too
-                  const val = e.target.value;
-                  if (key.match(/Price|Value|odometer|Year/) && Number(val) < 0)
-                    return;
-                  setForm({ ...form, [key]: val });
-                }}
-                min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
-              />
-
-              {formErrors[key] && (
-                <small style={{ color: "red" }}>{formErrors[key]}</small>
-              )}
-            </div>
-          ))}
-          <Button label="Save" className="btn save" onClick={handleAddSubmit} />
-        </div>
-      </Dialog>
-      <Dialog
-        header="✏️ Edit Vehicle Details"
-        visible={showEditModal}
-        style={{ width: "45vw", maxWidth: "700px" }}
-        onHide={() => setShowEditModal(false)}
-      >
-        {editData && (
-          <div
-            className="edit-vehicle-form"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1rem",
-              padding: "10px 0",
-            }}
-          >
-            {editableFields.map((key) => (
-              <div
-                key={key}
-                style={{ display: "flex", flexDirection: "column" }}
-              >
-                <label
-                  style={{
-                    fontWeight: "600",
-                    textTransform: "capitalize",
-                    marginBottom: "4px",
+              }}
+              disabled={vehiclePagination.currentPage === 1}
+            >
+              ←
+            </button>
+            {getPageList(
+              vehiclePagination.currentPage,
+              vehiclePagination.totalPages,
+              5
+            ).map((p, idx) =>
+              p === "…" ? (
+                <span key={`el-${idx}`} className="ellipsis">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  className={`pagination-btn ${
+                    vehiclePagination.currentPage === p ? "active" : ""
+                  }`}
+                  onClick={() => {
+                    setVehicleFilters({ ...vehicleFilters, page: p });
                   }}
                 >
-                  {key.replace(/([A-Z])/g, " $1")}
-                </label>
-                <InputText
-                  type={
-                    key.includes("Date")
-                      ? "date"
-                      : key.match(/Price|Value|odometer|Year/)
-                      ? "number"
-                      : "text"
-                  }
-                  value={editData[key] || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (
-                      key.match(/Price|Value|odometer|Year/) &&
-                      Number(val) < 0
-                    )
-                      return;
-                    setEditData({ ...editData, [key]: val });
-                  }}
-                  min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
-                  style={{
-                    padding: "8px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                  }}
-                />
-
-                {formErrors[key] && (
-                  <small style={{ color: "red", marginTop: "4px" }}>
-                    {formErrors[key]}
-                  </small>
-                )}
-              </div>
-            ))}
-
-            <div
-              style={{
-                gridColumn: "1 / -1",
-                textAlign: "right",
-                marginTop: "1.5rem",
+                  {p}
+                </button>
+              )
+            )}
+            <button
+              className="pagination-btn"
+              onClick={() => {
+                if (
+                  vehiclePagination.currentPage < vehiclePagination.totalPages
+                ) {
+                  setVehicleFilters({
+                    ...vehicleFilters,
+                    page: vehiclePagination.currentPage + 1,
+                  });
+                }
               }}
+              disabled={
+                vehiclePagination.currentPage === vehiclePagination.totalPages
+              }
             >
-              <Button
-                label="Update Vehicle"
-                icon="pi pi-check"
-                className="p-button-success"
-                onClick={handleEditSubmit}
-                style={{
-                  padding: "8px 20px",
-                  fontWeight: "600",
-                  borderRadius: "8px",
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </Dialog>
-
-      <Dialog
-        header="📋 Bulk Insertions"
-        visible={showListModal}
-        style={{ width: "60vw" }}
-        onHide={() => setShowListModal(false)}
-      >
-        {bulkList.length > 0 ? (
-          <div className="bulk-list-table-container">
-            <table className="bulk-list-table">
-              <thead>
-                <tr>
-                  <th>Batch ID</th>
-                  <th>Record Count</th>
-                  <th>Status</th>
-                  <th>Created On</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bulkList.map((batch) => (
-                  <tr key={batch.batchId}>
-                    <td>{batch.batchId}</td>
-                    <td>{batch.recordCount}</td>
-                    <td>
-                      <span className="status-badge status-success">
-                        {batch.status}
-                      </span>
-                    </td>
-                    <td>{new Date(batch.createdAt).toLocaleString()}</td>
-                    <td>
-                      <Button
-                        label="Delete"
-                        icon="pi pi-trash"
-                        severity="danger"
-                        text
-                        onClick={() => deleteBulkInsertion(batch.batchId)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              →
+            </button>
           </div>
         ) : (
-          <p style={{ textAlign: "center", padding: "20px" }}>
-            No bulk insertions found.
-          </p>
+          <p>Loading pagination...</p>
         )}
-      </Dialog>
-      <Dialog
-        header="Delete Bulk Insertion"
-        visible={showDeleteModal}
-        style={{ width: "30vw" }}
-        onHide={() => setShowDeleteModal(false)}
-      >
-        <label>Enter Batch ID:</label>
-        <InputText
-          value={deleteBatchId}
-          onChange={(e) => setDeleteBatchId(e.target.value)}
-        />
-        <Button
-          label="Delete"
-          className="btn save"
-          onClick={handleDeleteBatch}
-        />
-      </Dialog>
-      <Dialog
-        header="🕒 Vehicle Row History"
-        visible={showHistoryModal}
-        style={{ width: "65vw" }}
-        onHide={() => setShowHistoryModal(false)}
-      >
-        {rowHistory.length > 0 ? (
-          <div className="row-history-container">
-            {rowHistory.map((entry, index) => (
-              <div key={index} className="history-entry">
-                <div className="history-meta">
-                  <p>
-                    <strong>Updated By:</strong> {entry.user?.name} (
-                    {entry.user?.email})
-                  </p>
-                  <p>
-                    <strong>Updated On:</strong>{" "}
-                    {new Date(entry.updatedAt).toLocaleString()}
-                  </p>
+      </div>
+      {!isViewer && (
+        <>
+          <Dialog
+            header="Add New Vehicle"
+            visible={showAddModal}
+            style={{ width: "40vw" }}
+            onHide={() => setShowAddModal(false)}
+          >
+            <div className="add-user-form">
+              {Object.keys(form).map((key) => (
+                <div className="form-group" key={key}>
+                  <label>{key}</label>
+                  <InputText
+                    type={
+                      key.includes("Date")
+                        ? "date"
+                        : key.match(/Price|Value|odometer|Year/)
+                        ? "number"
+                        : "text"
+                    }
+                    value={form[key]}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (
+                        key.match(/Price|Value|odometer|Year/) &&
+                        Number(val) < 0
+                      )
+                        return;
+                      setForm({ ...form, [key]: val });
+                    }}
+                    min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+                  />
+                  {formErrors[key] && (
+                    <small style={{ color: "red" }}>{formErrors[key]}</small>
+                  )}
                 </div>
-                <table className="history-table">
+              ))}
+              <Button
+                label="Save"
+                className="btn save"
+                onClick={handleAddSubmit}
+              />
+            </div>
+          </Dialog>
+          <Dialog
+            header="✏️ Edit Vehicle Details"
+            visible={showEditModal}
+            style={{ width: "45vw", maxWidth: "700px" }}
+            onHide={() => setShowEditModal(false)}
+          >
+            {editData && (
+              <div
+                className="edit-vehicle-form"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                  padding: "10px 0",
+                }}
+              >
+                {editableFields.map((key) => (
+                  <div
+                    key={key}
+                    style={{ display: "flex", flexDirection: "column" }}
+                  >
+                    <label
+                      style={{
+                        fontWeight: "600",
+                        textTransform: "capitalize",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {key.replace(/([A-Z])/g, " $1")}
+                    </label>
+                    <InputText
+                      type={
+                        key.includes("Date")
+                          ? "date"
+                          : key.match(/Price|Value|odometer|Year/)
+                          ? "number"
+                          : "text"
+                      }
+                      value={editData[key] || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (
+                          key.match(/Price|Value|odometer|Year/) &&
+                          Number(val) < 0
+                        )
+                          return;
+                        setEditData({ ...editData, [key]: val });
+                      }}
+                      min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+                      style={{
+                        padding: "8px",
+                        borderRadius: "6px",
+                        border: "1px solid #ccc",
+                      }}
+                    />
+                    {formErrors[key] && (
+                      <small style={{ color: "red", marginTop: "4px" }}>
+                        {formErrors[key]}
+                      </small>
+                    )}
+                  </div>
+                ))}
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    textAlign: "right",
+                    marginTop: "1.5rem",
+                  }}
+                >
+                  <Button
+                    label="Update Vehicle"
+                    icon="pi pi-check"
+                    className="p-button-success"
+                    onClick={handleEditSubmit}
+                    style={{
+                      padding: "8px 20px",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </Dialog>
+          <Dialog
+            header="📋 Bulk Insertions"
+            visible={showListModal}
+            style={{ width: "60vw" }}
+            onHide={() => setShowListModal(false)}
+          >
+            {bulkList.length > 0 ? (
+              <div className="bulk-list-table-container">
+                <table className="bulk-list-table">
                   <thead>
                     <tr>
-                      <th>Field</th>
-                      <th>New Value</th>
+                      <th>Batch ID</th>
+                      <th>Record Count</th>
+                      <th>Status</th>
+                      <th>Created On</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(entry.changes || {}).map(([key, value]) => (
-                      <tr key={key}>
-                        <td className="history-key">{key}</td>
-                        <td className="history-value">{String(value)}</td>
+                    {bulkList.map((batch) => (
+                      <tr key={batch.batchId}>
+                        <td>{batch.batchId}</td>
+                        <td>{batch.recordCount}</td>
+                        <td>
+                          <span className="status-badge status-success">
+                            {batch.status}
+                          </span>
+                        </td>
+                        <td>{new Date(batch.createdAt).toLocaleString()}</td>
+                        <td>
+                          <Button
+                            label="Delete"
+                            icon="pi pi-trash"
+                            severity="danger"
+                            text
+                            onClick={() => deleteBulkInsertion(batch.batchId)}
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <div style={{ textAlign: "right", marginTop: "10px" }}>
-                  <Button
-                    label="↩️ Revert to This Version"
-                    severity="warning"
-                    onClick={() => handleRevert(entry.changes)}
-                  />
-                </div>
-                <hr style={{ margin: "20px 0" }} />
               </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ textAlign: "center", padding: "20px" }}>
-            No history found for this vehicle.
-          </p>
-        )}
-      </Dialog>
+            ) : (
+              <p style={{ textAlign: "center", padding: "20px" }}>
+                No bulk insertions found.
+              </p>
+            )}
+          </Dialog>
+          <Dialog
+            header="Delete Bulk Insertion"
+            visible={showDeleteModal}
+            style={{ width: "30vw" }}
+            onHide={() => setShowDeleteModal(false)}
+          >
+            <label>Enter Batch ID:</label>
+            <InputText
+              value={deleteBatchId}
+              onChange={(e) => setDeleteBatchId(e.target.value)}
+            />
+            <Button
+              label="Delete"
+              className="btn save"
+              onClick={handleDeleteBatch}
+            />
+          </Dialog>
+          <Dialog
+            header="🕒 Vehicle Row History"
+            visible={showHistoryModal}
+            style={{ width: "65vw" }}
+            onHide={() => setShowHistoryModal(false)}
+          >
+            {rowHistory.length > 0 ? (
+              <div className="row-history-container">
+                {rowHistory.map((entry, index) => (
+                  <div key={index} className="history-entry">
+                    <div className="history-meta">
+                      <p>
+                        <strong>Updated By:</strong> {entry.user?.name} (
+                        {entry.user?.email})
+                      </p>
+                      <p>
+                        <strong>Updated On:</strong>{" "}
+                        {new Date(entry.updatedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <table className="history-table">
+                      <thead>
+                        <tr>
+                          <th>Field</th>
+                          <th>New Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(entry.changes || {}).map(([key, value]) => (
+                          <tr key={key}>
+                            <td className="history-key">{key}</td>
+                            <td className="history-value">{String(value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {currentUser?.role === "admin" && (
+                      <div style={{ textAlign: "right", marginTop: "10px" }}>
+                        <Button
+                          label="↩️ Revert to This Version"
+                          severity="warning"
+                          onClick={() => handleRevert(entry.changes)}
+                        />
+                      </div>
+                    )}
+                    <hr style={{ margin: "20px 0" }} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ textAlign: "center", padding: "20px" }}>
+                No history found for this vehicle.
+              </p>
+            )}
+          </Dialog>
+        </>
+      )}
     </section>
   );
 };

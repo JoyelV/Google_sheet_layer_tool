@@ -111,7 +111,6 @@ const AdminDashboard = () => {
       console.log("API Response:", res.data);
       const vehicles = res?.data?.vehicles || [];
       setVehicleData(vehicles);
-
       const total = res?.data?.pagination?.total || vehicles.length;
       const backendTotalPages =
         res?.data?.pagination?.totalPages || Math.ceil(total / filters.limit);
@@ -123,14 +122,12 @@ const AdminDashboard = () => {
         "Total pages:",
         backendTotalPages
       );
-
       setVehiclePagination({
         currentPage: filters.page,
         totalPages: backendTotalPages,
         totalVehicles: total,
         limit: filters.limit,
       });
-
       if (
         !filters.year &&
         !filters.make &&
@@ -338,7 +335,7 @@ const AdminDashboard = () => {
 
   const deleteUser = async (id) => {
     try {
-      const res = await axios.delete(`/users/${id}`);
+      await axios.delete(`/users/${id}`);
       await fetchUsers(filters);
       return { success: true };
     } catch (err) {
@@ -372,6 +369,7 @@ const AdminDashboard = () => {
             setVehicleFilters={setVehicleFilters}
             vehiclePagination={vehiclePagination}
             vehicleLoading={vehicleLoading}
+            currentUser={currentUser} 
           />
         );
       case "users":

@@ -68,11 +68,6 @@ const UserManagement = ({
     { label: "Deleted", value: "deleted" },
   ];
 
-  const editStatusOptions = [
-    { label: "Active", value: "active" },
-    { label: "Blocked", value: "blocked" },
-  ];
-
   // Validation logic for both add and edit forms
   const validateUser = (user, isEdit = false) => {
     const newErrors = {};

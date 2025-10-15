@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import './Header.css'
 
 const Header = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ const Header = () => {
   return (
     <header className="header-bar">
       <div className="user-info">
-        <span>{user.name}</span> |  <span>{user.email}</span>| <span>{user.role}</span>
+        <span>{user.name}</span> | <span>{user.role}</span>
       </div>
       <div className="header-actions">
         <button className="btn logout" onClick={handleLogout}>
