@@ -12,6 +12,7 @@ const ProfileAndPassword = () => {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingPassword, setLoadingPassword] = useState(false);
   const toast = useRef(null);
 
@@ -44,56 +45,26 @@ const ProfileAndPassword = () => {
     fetchProfile();
   }, []);
 
-  // Password validation logic
-  const validatePassword = (password) => {
-    const minLength = 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    if (password.length < minLength) {
-      return "Password must be at least 8 characters long.";
-    }
-    if (!hasUpperCase) {
-      return "Password must contain at least one uppercase letter.";
-    }
-    if (!hasLowerCase) {
-      return "Password must contain at least one lowercase letter.";
-    }
-    if (!hasNumber) {
-      return "Password must contain at least one number.";
-    }
-    if (!hasSpecialChar) {
-      return "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>).";
-    }
-    return null;
-  };
-
   // Handle password change
   const handleChangePassword = async (e) => {
     e.preventDefault();
-
-    if (!currentPassword || !newPassword) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       return showToast("warn", "Missing Fields", "Please fill in all fields.");
     }
-
-    const passwordError = validatePassword(newPassword);
-    if (passwordError) {
-      return showToast("warn", "Invalid Password", passwordError);
+    if (newPassword !== confirmPassword) {
+      return showToast("error", "Validation Error", "New password and confirm password do not match.");
     }
-
     setLoadingPassword(true);
     try {
       const res = await axios.put("/auth/change-password", {
         currentPassword,
         newPassword,
       });
-
       if (res.data.success) {
         showToast("success", "Password Updated", "Your password has been changed successfully.");
         setCurrentPassword("");
         setNewPassword("");
+        setConfirmPassword("");
       } else {
         showToast("error", "Failed", res.data.message || "Password update failed.");
       }
@@ -109,8 +80,7 @@ const ProfileAndPassword = () => {
     <div className="content-profile">
       {/* Toast Notification */}
       <Toast ref={toast} />
-
-      {/* Profile Section */}
+       {/* Profile Section */}
       <div className="profile-card">
         <h2 className="profile-title">Profile</h2>
         {loadingProfile ? (
@@ -131,13 +101,13 @@ const ProfileAndPassword = () => {
           <p>No profile data available.</p>
         )}
       </div>
-
       {/* Change Password Section */}
       <form className="form-card" onSubmit={handleChangePassword}>
         <h2 className="section-title">Change Password</h2>
         <div className="form-group">
-          <label>Current Password:</label>
+          <label htmlFor="currentPassword">Current Password:</label>
           <input
+            id="currentPassword"
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
@@ -145,11 +115,22 @@ const ProfileAndPassword = () => {
           />
         </div>
         <div className="form-group">
-          <label>New Password:</label>
+          <label htmlFor="newPassword">New Password:</label>
           <input
+            id="newPassword"
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="confirmPassword">Confirm New Password:</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
         </div>

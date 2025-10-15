@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { InputText } from "primereact/inputtext";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
-import axios from "../api/axiosInstance";
 import "react-toastify/dist/ReactToastify.css";
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
+import secureLocalStorage from "react-secure-storage";
 import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
 
@@ -39,8 +39,6 @@ const UserManagement = ({
     password: "",
   });
   const [searchInput, setSearchInput] = useState("");
-  const [searchedUser, setSearchedUser] = useState(null);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -53,14 +51,14 @@ const UserManagement = ({
     status: "",
   });
 
-  // Filter options
+  const prevFiltersRef = useRef(filters);
+
   const roleOptions = [
     { label: "All Roles", value: "" },
     { label: "Admin", value: "admin" },
     { label: "Editor", value: "editor" },
     { label: "Viewer", value: "viewer" },
   ];
-
   const statusOptions = [
     { label: "All Statuses", value: "" },
     { label: "Active", value: "active" },
@@ -68,134 +66,94 @@ const UserManagement = ({
     { label: "Deleted", value: "deleted" },
   ];
 
-  // Validation logic for both add and edit forms
   const validateUser = (user, isEdit = false) => {
-    const newErrors = {};
-    // Name validation
-    if (!user.name.trim()) {
-      newErrors.name = "Name is required";
-    } else if (user.name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters long";
-    }
-
-    // Email validation
-    if (!user.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(user.email)
-    ) {
-      newErrors.email = "Invalid email format";
-    }
-
-    // Role validation
-    if (!user.role.trim()) {
-      newErrors.role = "Role is required";
-    } else if (!["admin", "editor", "viewer"].includes(user.role)) {
-      newErrors.role = "Role must be admin, editor, or viewer";
-    }
-
-    // Password validation (required for add, not applicable for edit)
-    if (!isEdit) {
-      if (!user.password.trim()) {
-        newErrors.password = "Password is required";
-      } else {
-        const minLength = 8;
-        const hasUpperCase = /[A-Z]/.test(user.password);
-        const hasLowerCase = /[a-z]/.test(user.password);
-        const hasNumber = /[0-9]/.test(user.password);
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(user.password);
-
-        if (user.password.length < minLength) {
-          newErrors.password = "Password must be at least 8 characters long";
-        } else if (!hasUpperCase) {
-          newErrors.password =
-            "Password must contain at least one uppercase letter";
-        } else if (!hasLowerCase) {
-          newErrors.password =
-            "Password must contain at least one lowercase letter";
-        } else if (!hasNumber) {
-          newErrors.password = "Password must contain at least one number";
-        } else if (!hasSpecialChar) {
-          newErrors.password =
-            'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)';
-        }
+  const newErrors = {};
+  if (!user.name?.trim()) {
+    newErrors.name = "Name is required";
+  } else if (user.name.length < 2) {
+    newErrors.name = "Name must be at least 2 characters long";
+  }
+  if (!user.email?.trim()) {
+    newErrors.email = "Email is required";
+  } else if (
+    !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(user.email)
+  ) {
+    newErrors.email = "Invalid email format";
+  }
+  if (!user.role?.trim()) {
+    newErrors.role = "Role is required";
+  } else if (!["admin", "editor", "viewer"].includes(user.role)) {
+    newErrors.role = "Role must be admin, editor, or viewer";
+  }
+  if (!isEdit) {
+    if (!user.password?.trim()) {
+      newErrors.password = "Password is required";
+    } else {
+      const minLength = 8;
+      const hasUpperCase = /[A-Z]/.test(user.password);
+      const hasLowerCase = /[a-z]/.test(user.password);
+      const hasNumber = /[0-9]/.test(user.password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(user.password);
+      if (user.password.length < minLength) {
+        newErrors.password = "Password must be at least 8 characters long";
+      } else if (!hasUpperCase) {
+        newErrors.password = "Password must contain at least one uppercase letter";
+      } else if (!hasLowerCase) {
+        newErrors.password = "Password must contain at least one lowercase letter";
+      } else if (!hasNumber) {
+        newErrors.password = "Password must contain at least one number";
+      } else if (!hasSpecialChar) {
+        newErrors.password = "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
       }
     }
-
-    // Status validation (for edit only)
-    if (isEdit) {
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (user.id === storedUser?.id && user.status === "blocked") {
-        newErrors.status = "Cannot block your own account";
-      } else if (!user.status.trim()) {
-        newErrors.status = "Status is required";
-      } else if (!["active", "blocked"].includes(user.status)) {
-        newErrors.status = "Status must be active or blocked";
-      }
+  }
+  if (isEdit) {
+    const storedUser = secureLocalStorage.getItem("user");
+    if (user.id === storedUser?.id && user.status === "blocked") {
+      newErrors.status = "Cannot block your own account";
+    } else if (!user.status?.trim()) {
+      newErrors.status = "Status is required";
+    } else if (!["active", "blocked"].includes(user.status)) {
+      newErrors.status = "Status must be active or blocked";
     }
+  }
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Fetch user by ID from backend
-  const fetchUserById = async (id) => {
-    if (!id) {
-      setSearchedUser(null);
-      return;
-    }
-    setSearchLoading(true);
-    try {
-      const res = await axios.get(`/users/${id}`);
-      if (res.data.success && res.data.data.user) {
-        setSearchedUser(res.data.data.user);
-      } else {
-        setSearchedUser(null);
-        toast.error("User not found");
-      }
-    } catch (err) {
-      console.error("Error fetching user by ID:", err);
-      setSearchedUser(null);
-      toast.error("Failed to fetch user");
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  // Debounce search input
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      const id = Number(searchInput.trim());
-      if (id > 0) {
-        setFilters((prev) => ({ ...prev, role: "", status: "" }));
-        fetchUserById(id);
-      } else {
-        setSearchedUser(null);
-        fetchUsers(filters);
+      const newFilters = { ...filters, search: searchInput.trim() };
+      if (searchInput.trim() !== prevFiltersRef.current.search) {
+        newFilters.page = 1;
+      }
+      if (
+        JSON.stringify(newFilters) !== JSON.stringify(prevFiltersRef.current)
+      ) {
+        setFilters(newFilters);
+        fetchUsers(newFilters);
+        prevFiltersRef.current = newFilters;
       }
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
-  }, [searchInput]);
+  }, [searchInput, fetchUsers, setFilters, filters]);
 
-  // Handle filter changes
   const handleFilterChange = (key, selectedOption) => {
     const value = selectedOption?.value ?? selectedOption ?? "";
     const newFilters = { ...filters, [key]: value, page: 1 };
-    setSearchInput("");
-    setSearchedUser(null);
     setFilters(newFilters);
     fetchUsers(newFilters);
+    prevFiltersRef.current = newFilters;
   };
 
-  // Handle pagination change
   const handlePageChange = (event, page) => {
+    console.log("Changing to page:", page);
     const newFilters = { ...filters, page };
     setFilters(newFilters);
     fetchUsers(newFilters);
+    prevFiltersRef.current = newFilters;
   };
 
-  // Edit handlers
   const handleEditClick = (user) => {
     setEditingRowId(user.id);
     setEditedUser({ ...user, status: user.status || "active" });
@@ -208,9 +166,7 @@ const UserManagement = ({
       toast.success(result.message);
       setEditingRowId(null);
       setEditedUser({});
-      if (searchInput.trim()) {
-        fetchUserById(searchInput.trim());
-      }
+      fetchUsers(filters);
     } else {
       toast.error(result?.message || "Failed to update user");
     }
@@ -223,7 +179,6 @@ const UserManagement = ({
     toast.info("Edit cancelled");
   };
 
-  // Add handler
   const handleAddUser = async () => {
     if (!validateUser(newUser)) return;
     const result = await addUser(newUser);
@@ -232,12 +187,12 @@ const UserManagement = ({
       setShowAddModal(false);
       setNewUser({ name: "", email: "", role: "", password: "" });
       setErrors({});
+      fetchUsers(filters);
     } else {
       toast.error(result?.message || "❌ Failed to add user.");
     }
   };
 
-  // Confirmation dialog handlers
   const openConfirmDialog = (user, actionType) => {
     setSelectedUser(user);
     setConfirmAction(actionType);
@@ -260,23 +215,20 @@ const UserManagement = ({
     setConfirmDialogVisible(false);
     setSelectedUser(null);
     setConfirmAction(null);
-    if (searchInput.trim()) {
-      fetchUserById(searchInput.trim());
-    }
+    fetchUsers(filters);
   };
 
-  // Block/unblock
   const handleToggleBlock = async (user) => {
     if (user.email === currentUser?.email) {
       toast.warning("⚠️ You cannot block your own account!");
       return;
     }
-
     try {
       const result = await toggleBlock(user);
       if (result?.success) {
         const action = user.status === "blocked" ? "unblocked" : "blocked";
         toast.success(`✅ User ${action} successfully!`);
+        fetchUsers(filters);
       } else {
         toast.error("Failed to update user status.");
       }
@@ -285,17 +237,16 @@ const UserManagement = ({
     }
   };
 
-  // Delete
   const handleDelete = async (user) => {
     if (user.email === currentUser?.email) {
       toast.warning("⚠️ You cannot delete your own account!");
       return;
     }
-
     try {
       const result = await deleteUser(user.id);
       if (result?.success) {
         toast.success("🗑️ User deleted successfully!");
+        fetchUsers(filters);
       } else {
         toast.error("Failed to delete user.");
       }
@@ -305,7 +256,7 @@ const UserManagement = ({
     }
   };
 
-  if (loading || searchLoading)
+  if (loading)
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -324,13 +275,9 @@ const UserManagement = ({
     </div>
   );
 
-  const displayUsers = searchedUser ? [searchedUser] : users;
-
   return (
     <section className="content-section">
       <ToastContainer position="top-right" autoClose={2500} theme="colored" />
-
-      {/* Confirm Action Dialog */}
       <Dialog
         header="Confirm Action"
         visible={confirmDialogVisible}
@@ -354,8 +301,6 @@ const UserManagement = ({
       >
         <p>{confirmMessage}</p>
       </Dialog>
-
-      {/* Add User Dialog */}
       <Dialog
         header="Add New User"
         visible={showAddModal}
@@ -384,6 +329,7 @@ const UserManagement = ({
                 setNewUser({ ...newUser, email: e.target.value })
               }
               placeholder="Enter email"
+              autoComplete="off"
             />
             {errors.email && (
               <small className="error-text">{errors.email}</small>
@@ -414,6 +360,7 @@ const UserManagement = ({
                 setNewUser({ ...newUser, password: e.target.value })
               }
               placeholder="Enter password"
+              autoComplete="new-password"
             />
             {errors.password && (
               <small className="error-text">{errors.password}</small>
@@ -421,8 +368,6 @@ const UserManagement = ({
           </div>
         </div>
       </Dialog>
-
-      {/* User Table */}
       <div className="crud-actions">
         <h1 className="section-title">User Management</h1>
         <div
@@ -430,8 +375,7 @@ const UserManagement = ({
           style={{ display: "flex", gap: "10px", alignItems: "center" }}
         >
           <InputText
-            type="number"
-            placeholder="Search by user ID..."
+            placeholder="Search by user name..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             style={{ marginBottom: "10px", width: "250px" }}
@@ -455,9 +399,7 @@ const UserManagement = ({
           </button>
         </div>
       </div>
-
       <p className="section-subtitle">Manage admins, editors, and viewers</p>
-
       <div className="table-container">
         <table>
           <thead>
@@ -471,14 +413,14 @@ const UserManagement = ({
             </tr>
           </thead>
           <tbody>
-            {displayUsers.length === 0 ? (
+            {users.length === 0 ? (
               <tr>
                 <td colSpan="6" style={{ textAlign: "center" }}>
                   No users found
                 </td>
               </tr>
             ) : (
-              displayUsers.map((u) => (
+              users.map((u) => (
                 <tr key={u.id}>
                   <td>{u.id}</td>
                   <td>
@@ -535,7 +477,7 @@ const UserManagement = ({
                               status: e.target.value,
                             })
                           }
-                          disabled={u.email === currentUser?.email} // ✅ disable only for self
+                          disabled={u.email === currentUser?.email}
                         >
                           <option value="active">Active</option>
                           <option value="blocked">Blocked</option>
@@ -552,7 +494,6 @@ const UserManagement = ({
                       "Active"
                     )}
                   </td>
-
                   <td style={{ display: "flex", gap: "8px" }}>
                     {editingRowId === u.id ? (
                       <>
@@ -591,7 +532,6 @@ const UserManagement = ({
                             <i className="pi pi-lock" />
                           )}
                         </button>
-
                         <button
                           className={`icon-btn delete ${
                             u.status === "deleted" ? "disabled" : ""
@@ -615,11 +555,11 @@ const UserManagement = ({
             )}
           </tbody>
         </table>
-        {!searchedUser && pagination.totalPages > 1 && (
+        {pagination.totalPages > 1 && (
           <Stack spacing={2} alignItems="center" sx={{ marginTop: "10px" }}>
             <Pagination
               count={pagination.totalPages}
-              page={pagination.currentPage}
+              page={filters.page}
               onChange={handlePageChange}
               color="primary"
               shape="rounded"
@@ -631,4 +571,4 @@ const UserManagement = ({
   );
 };
 
-export default UserManagement;
+export default React.memo(UserManagement);

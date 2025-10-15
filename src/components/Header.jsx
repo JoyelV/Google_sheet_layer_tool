@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../../src/api/axiosInstance"; 
+import secureLocalStorage from "react-secure-storage";
 import { useNavigate } from "react-router-dom";
-import './Header.css'
+import './Header.css';
 
 const Header = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState({ name: "", email: "", role: "" });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
+    const storedUser = secureLocalStorage.getItem("user");
+    if (storedUser && typeof storedUser === "object") {
+      setUser(storedUser);
+    } else {
+      console.error("Invalid user data or no user found");
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem("token"); 
+    const token = secureLocalStorage.getItem("token");
     try {
       if (token) {
         await axios.post(
@@ -25,8 +31,8 @@ const Header = () => {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      secureLocalStorage.removeItem("token");
+      secureLocalStorage.removeItem("user");
       navigate("/login");
     }
   };
@@ -34,7 +40,7 @@ const Header = () => {
   return (
     <header className="header-bar">
       <div className="user-info">
-        <span>{user.name}</span> | <span>{user.role}</span>
+        <span>{user.name || "Guest"}</span> | <span>{user.role || "No Role"}</span>
       </div>
       <div className="header-actions">
         <button className="btn logout" onClick={handleLogout}>

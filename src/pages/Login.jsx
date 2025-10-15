@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "../../src/api/axiosInstance";
+import axios from "../../src/api/axiosInstance"; 
+import secureLocalStorage from "react-secure-storage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./Login.css";
@@ -21,15 +22,10 @@ const Login = () => {
     try {
       const { data } = await axios.post("/auth/login", { email, password });
 
-      // Save token
-      localStorage.setItem("token", data.data.accessToken);
-
-      // Save user info
+      // Save token and user info securely
+      secureLocalStorage.setItem("token", data.data.accessToken);
       const { name, email: userEmail, role } = data.data.user;
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ name, email: userEmail, role })
-      );
+      secureLocalStorage.setItem("user", { name, email: userEmail, role });
 
       // Toast success
       toast.success(data.message || "Logged in successfully!", {
@@ -102,7 +98,6 @@ const Login = () => {
         <p className="footer-text">Secure access to Google Sheets</p>
       </div>
 
-      {/* Toast Container */}
       <ToastContainer />
     </div>
   );

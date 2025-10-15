@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import secureLocalStorage from "react-secure-storage";
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
 const ProtectedRoute = () => {
-  const token = localStorage.getItem('token');
+  const token = secureLocalStorage.getItem('token');
   
   if (!token) {
     return <Navigate to="/" replace />;
@@ -12,17 +13,16 @@ const ProtectedRoute = () => {
 };
 
 const PublicRoute = () => {
-  const token = localStorage.getItem('token');
+  const token = secureLocalStorage.getItem('token');
   return token ? <Navigate to="/admin" replace /> : <Outlet />;
 };
-
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<PublicRoute />}>
-           <Route path="/" element={<Login />} />
+          <Route path="/" element={<Login />} />
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<AdminDashboard />} />

@@ -6,6 +6,7 @@ import VehicleManagement from "../components/VehicleManagement";
 import axios from "../api/axiosInstance";
 import ProfileAndPassword from "../components/ProfileAndPassword";
 import "react-toastify/dist/ReactToastify.css";
+import secureLocalStorage from "react-secure-storage";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
@@ -21,13 +22,17 @@ const AdminDashboard = () => {
     totalUsers: 0,
     limit: 10,
   });
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
-    role: "",
-    status: "",
-    search: "",
-  });
+
+const [filters, setFilters] = useState({
+  page: 1,
+  limit: 10,
+  role: "",
+  status: "",
+  search: "",
+  sortBy: "", 
+  sortOrder: "asc", 
+});
+
   const [vehicleFilters, setVehicleFilters] = useState({
     page: 1,
     limit: 10,
@@ -38,6 +43,7 @@ const AdminDashboard = () => {
     sortBy: "modelNumber",
     sortOrder: "desc",
   });
+
   const [vehiclePagination, setVehiclePagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -45,52 +51,53 @@ const AdminDashboard = () => {
     limit: 10,
   });
 
-  const storedUser = localStorage.getItem("user");
-  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+const storedUser = secureLocalStorage.getItem("user");
+const currentUser = storedUser && typeof storedUser === "object" ? storedUser : null;
 
   const fetchUsers = async ({
-    page = 1,
-    limit = 10,
-    role = "",
-    status = "",
-    search = "",
-  }) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
-          search
-        )}`
-      );
-      if (res.data.success) {
-        setUsers(res.data.data.users || []);
-        setPagination(
-          res.data.data.pagination || {
-            currentPage: page,
-            totalPages: 1,
-            totalUsers: 0,
-            limit,
-          }
-        );
-      } else {
-        setUsers([]);
-        setPagination({
+  page = 1,
+  limit = 10,
+  role = "",
+  status = "",
+  search = "",
+  sortBy = "",
+  sortOrder = "asc",
+}) => {
+  setLoading(true);
+  try {
+    const res = await axios.get(
+      `/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
+        search
+      )}&sortBy=${sortBy}&sortOrder=${sortOrder}`
+    );
+    if (res.data.success) {
+      setUsers(res.data.data.users || []);
+      setPagination(
+        res.data.data.pagination || {
           currentPage: page,
           totalPages: 1,
           totalUsers: 0,
           limit,
-        });
-        console.error("Failed to fetch users:", res.data.message);
-      }
-    } catch (err) {
-      console.error("Error fetching users:", err);
+        }
+      );
+    } else {
       setUsers([]);
-      setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
-    } finally {
-      setLoading(false);
+      setPagination({
+        currentPage: page,
+        totalPages: 1,
+        totalUsers: 0,
+        limit,
+      });
+      console.error("Failed to fetch users:", res.data.message);
     }
-  };
-
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    setUsers([]);
+    setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
+  } finally {
+    setLoading(false);
+  }
+};
   const fetchVehicles = async (filters = vehicleFilters) => {
     setVehicleLoading(true);
     try {
