@@ -491,7 +491,7 @@ tbody tr:hover {
 }
 
 /* Inline editing inputs */
-.inline-edit-input {
+/* .inline-edit-input {
   width: 100%;
   padding: 10px;
   border: 1px solid #cfd8dc;
@@ -504,7 +504,7 @@ tbody tr:hover {
 .inline-edit-input:focus {
   border-color: #4a90e2;
   box-shadow: 0 0 4px rgba(74, 144, 226, 0.4);
-}
+} */
 
 .icon-btn.save, .icon-btn.cancel {
   font-size: 1rem;
@@ -522,6 +522,20 @@ tbody tr:hover {
 
 .p-inputtext {
   padding: 10px;
+}
+
+.p-dialog-content {
+      padding: 10px;
+}
+
+.edit-vehicle-form label {
+  color: #333;
+  font-size: 14px;
+}
+
+.p-button-success {
+  background-color: #22c55e !important;
+  border: none !important;
 }
 
 /* Responsive */

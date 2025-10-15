@@ -24,7 +24,7 @@ const UserManagement = ({
   setFilters,
 }) => {
   const [editingRowId, setEditingRowId] = useState(null);
-  const [editedUser, setEditedUser] = useState({});
+  const [editedUser, setEditedUser] = useState({ name: "", email: "", role: "", status: "" });
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
@@ -35,18 +35,16 @@ const UserManagement = ({
   const [searchInput, setSearchInput] = useState("");
   const [searchedUser, setSearchedUser] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
-
-  // Confirmation modal states
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState("");
-
   const [errors, setErrors] = useState({
     name: "",
     email: "",
     role: "",
     password: "",
+    status: "",
   });
 
   // Filter options
@@ -63,6 +61,76 @@ const UserManagement = ({
     { label: "Blocked", value: "blocked" },
     { label: "Deleted", value: "deleted" },
   ];
+
+  const editStatusOptions = [
+    { label: "Active", value: "active" },
+    { label: "Blocked", value: "blocked" },
+  ];
+
+  // Validation logic for both add and edit forms
+  const validateUser = (user, isEdit = false) => {
+    const newErrors = {};
+    // Name validation
+    if (!user.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (user.name.length < 2) {
+      newErrors.name = "Name must be at least 2 characters long";
+    }
+
+    // Email validation
+    if (!user.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(user.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    // Role validation
+    if (!user.role.trim()) {
+      newErrors.role = "Role is required";
+    } else if (!["admin", "editor", "viewer"].includes(user.role)) {
+      newErrors.role = "Role must be admin, editor, or viewer";
+    }
+
+    // Password validation (required for add, not applicable for edit)
+    if (!isEdit) {
+      if (!user.password.trim()) {
+        newErrors.password = "Password is required";
+      } else {
+        const minLength = 8;
+        const hasUpperCase = /[A-Z]/.test(user.password);
+        const hasLowerCase = /[a-z]/.test(user.password);
+        const hasNumber = /[0-9]/.test(user.password);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(user.password);
+
+        if (user.password.length < minLength) {
+          newErrors.password = "Password must be at least 8 characters long";
+        } else if (!hasUpperCase) {
+          newErrors.password = "Password must contain at least one uppercase letter";
+        } else if (!hasLowerCase) {
+          newErrors.password = "Password must contain at least one lowercase letter";
+        } else if (!hasNumber) {
+          newErrors.password = "Password must contain at least one number";
+        } else if (!hasSpecialChar) {
+          newErrors.password = "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
+        }
+      }
+    }
+
+    // Status validation (for edit only)
+    if (isEdit) {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user.id === storedUser?.id && user.status === "blocked") {
+        newErrors.status = "Cannot block your own account";
+      } else if (!user.status.trim()) {
+        newErrors.status = "Status is required";
+      } else if (!["active", "blocked"].includes(user.status)) {
+        newErrors.status = "Status must be active or blocked";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // Fetch user by ID from backend
   const fetchUserById = async (id) => {
@@ -88,38 +156,31 @@ const UserManagement = ({
     }
   };
 
-// Debounce search input (fetch only if > 0)
-useEffect(() => {
-  const delayDebounceFn = setTimeout(() => {
-    const id = Number(searchInput.trim());
-    if (id > 0) {
-      // Clear role and status when searching by ID
-      setFilters((prev) => ({ ...prev, role: "", status: "" }));
-      fetchUserById(id);
-    } else {
-      // If cleared or invalid, show all users again
-      setSearchedUser(null);
-      fetchUsers(filters);
-    }
-  }, 500);
+  // Debounce search input
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      const id = Number(searchInput.trim());
+      if (id > 0) {
+        setFilters((prev) => ({ ...prev, role: "", status: "" }));
+        fetchUserById(id);
+      } else {
+        setSearchedUser(null);
+        fetchUsers(filters);
+      }
+    }, 500);
 
-  return () => clearTimeout(delayDebounceFn);
-}, [searchInput]);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchInput]);
 
-// Handle filter changes (role, status)
-const handleFilterChange = (key, selectedOption) => {
-  // Extract the value correctly
-  const value = selectedOption?.value ?? selectedOption ?? "";
-
-  const newFilters = { ...filters, [key]: value, page: 1 };
-
-  // Clear search input when filter is used
-  setSearchInput("");
-  setSearchedUser(null);
-
-  setFilters(newFilters);
-  fetchUsers(newFilters);
-};
+  // Handle filter changes
+  const handleFilterChange = (key, selectedOption) => {
+    const value = selectedOption?.value ?? selectedOption ?? "";
+    const newFilters = { ...filters, [key]: value, page: 1 };
+    setSearchInput("");
+    setSearchedUser(null);
+    setFilters(newFilters);
+    fetchUsers(newFilters);
+  };
 
   // Handle pagination change
   const handlePageChange = (event, page) => {
@@ -128,20 +189,21 @@ const handleFilterChange = (key, selectedOption) => {
     fetchUsers(newFilters);
   };
 
-  // EDIT
+  // Edit handlers
   const handleEditClick = (user) => {
     setEditingRowId(user.id);
-    setEditedUser({ ...user });
+    setEditedUser({ ...user, status: user.status || "active" });
   };
 
   const handleSaveClick = async () => {
+    if (!validateUser(editedUser, true)) return;
     const result = await editUser(editedUser);
     if (result?.success) {
       toast.success(result.message);
       setEditingRowId(null);
       setEditedUser({});
       if (searchInput.trim()) {
-        fetchUserById(searchInput.trim()); // Refresh searched user
+        fetchUserById(searchInput.trim());
       }
     } else {
       toast.error(result?.message || "Failed to update user");
@@ -151,13 +213,13 @@ const handleFilterChange = (key, selectedOption) => {
   const handleCancelClick = () => {
     setEditingRowId(null);
     setEditedUser({});
+    setErrors({});
     toast.info("Edit cancelled");
   };
 
-  // ADD
+  // Add handler
   const handleAddUser = async () => {
-    if (!validateUser()) return;
-
+    if (!validateUser(newUser)) return;
     const result = await addUser(newUser);
     if (result?.success) {
       toast.success("✅ User added successfully!");
@@ -169,28 +231,13 @@ const handleFilterChange = (key, selectedOption) => {
     }
   };
 
-  // VALIDATION
-  const validateUser = () => {
-    const newErrors = {};
-    if (!newUser.name.trim()) newErrors.name = "Name is required";
-    if (!newUser.email.trim()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(newUser.email))
-      newErrors.email = "Invalid email format";
-    if (!newUser.role.trim()) newErrors.role = "Role is required";
-    if (!newUser.password.trim()) newErrors.password = "Password is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // CONFIRMATION DIALOG HANDLERS
+  // Confirmation dialog handlers
   const openConfirmDialog = (user, actionType) => {
     setSelectedUser(user);
     setConfirmAction(actionType);
     setConfirmMessage(
       actionType === "block"
-        ? `Are you sure you want to ${
-            user.status === "blocked" ? "unblock" : "block"
-          } this user?`
+        ? `Are you sure you want to ${user.status === "blocked" ? "unblock" : "block"} this user?`
         : "Are you sure you want to delete this user?"
     );
     setConfirmDialogVisible(true);
@@ -206,11 +253,11 @@ const handleFilterChange = (key, selectedOption) => {
     setSelectedUser(null);
     setConfirmAction(null);
     if (searchInput.trim()) {
-      fetchUserById(searchInput.trim()); // Refresh searched user
+      fetchUserById(searchInput.trim());
     }
   };
 
-  // BLOCK/UNBLOCK
+  // Block/unblock
   const handleToggleBlock = async (user) => {
     try {
       const result = await toggleBlock(user);
@@ -225,14 +272,14 @@ const handleFilterChange = (key, selectedOption) => {
     }
   };
 
-  // DELETE
+  // Delete
   const handleDelete = async (user) => {
     try {
       const result = await deleteUser(user.id);
       if (result?.success) {
         toast.success("🗑️ User deleted successfully!");
         if (searchInput.trim() && user.id === Number(searchInput)) {
-          setSearchedUser(null); // Clear searched user if deleted
+          setSearchedUser(null);
         }
       } else {
         toast.error("Failed to delete user.");
@@ -262,7 +309,6 @@ const handleFilterChange = (key, selectedOption) => {
     </div>
   );
 
-  // Determine which users to display
   const displayUsers = searchedUser ? [searchedUser] : users;
 
   return (
@@ -276,13 +322,8 @@ const handleFilterChange = (key, selectedOption) => {
         style={{ width: "350px" }}
         onHide={() => setConfirmDialogVisible(false)}
         footer={
-          <div
-            style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}
-          >
-            <button
-              className="btn cancel"
-              onClick={() => setConfirmDialogVisible(false)}
-            >
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <button className="btn cancel" onClick={() => setConfirmDialogVisible(false)}>
               Cancel
             </button>
             <button className="btn save" onClick={handleConfirmAction}>
@@ -319,14 +360,10 @@ const handleFilterChange = (key, selectedOption) => {
             <label>Email</label>
             <InputText
               value={newUser.email}
-              onChange={(e) =>
-                setNewUser({ ...newUser, email: e.target.value })
-              }
+              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
               placeholder="Enter email"
             />
-            {errors.email && (
-              <small className="error-text">{errors.email}</small>
-            )}
+            {errors.email && <small className="error-text">{errors.email}</small>}
           </div>
           <div className="form-group">
             <label>Role</label>
@@ -349,14 +386,10 @@ const handleFilterChange = (key, selectedOption) => {
             <InputText
               type="password"
               value={newUser.password}
-              onChange={(e) =>
-                setNewUser({ ...newUser, password: e.target.value })
-              }
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
               placeholder="Enter password"
             />
-            {errors.password && (
-              <small className="error-text">{errors.password}</small>
-            )}
+            {errors.password && <small className="error-text">{errors.password}</small>}
           </div>
         </div>
       </Dialog>
@@ -394,7 +427,6 @@ const handleFilterChange = (key, selectedOption) => {
 
       <p className="section-subtitle">Manage admins, editors, and viewers</p>
 
-      {/* User Table */}
       <div className="table-container">
         <table>
           <thead>
@@ -422,9 +454,7 @@ const handleFilterChange = (key, selectedOption) => {
                     {editingRowId === u.id ? (
                       <InputText
                         value={editedUser.name}
-                        onChange={(e) =>
-                          setEditedUser({ ...editedUser, name: e.target.value })
-                        }
+                        onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
                       />
                     ) : (
                       u.name
@@ -434,9 +464,7 @@ const handleFilterChange = (key, selectedOption) => {
                     {editingRowId === u.id ? (
                       <InputText
                         value={editedUser.email}
-                        onChange={(e) =>
-                          setEditedUser({ ...editedUser, email: e.target.value })
-                        }
+                        onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
                       />
                     ) : (
                       u.email
@@ -446,9 +474,7 @@ const handleFilterChange = (key, selectedOption) => {
                     {editingRowId === u.id ? (
                       <select
                         value={editedUser.role}
-                        onChange={(e) =>
-                          setEditedUser({ ...editedUser, role: e.target.value })
-                        }
+                        onChange={(e) => setEditedUser({ ...editedUser, role: e.target.value })}
                       >
                         <option value="admin">Admin</option>
                         <option value="editor">Editor</option>
@@ -459,39 +485,44 @@ const handleFilterChange = (key, selectedOption) => {
                     )}
                   </td>
                   <td>
-                    {u.status === "deleted"
-                      ? "Deleted"
-                      : u.status === "blocked"
-                      ? "Blocked"
-                      : "Active"}
+                    {editingRowId === u.id ? (
+                      <div>
+                        <select
+                          value={editedUser.status}
+                          onChange={(e) => setEditedUser({ ...editedUser, status: e.target.value })}
+                        >
+                          <option value="active">Active</option>
+                          <option value="blocked">Blocked</option>
+                        </select>
+                        {errors.status && <small className="error-text">{errors.status}</small>}
+                      </div>
+                    ) : u.status === "deleted" ? (
+                      "Deleted"
+                    ) : u.status === "blocked" ? (
+                      "Blocked"
+                    ) : (
+                      "Active"
+                    )}
                   </td>
                   <td style={{ display: "flex", gap: "8px" }}>
                     {editingRowId === u.id ? (
                       <>
-                        <button
-                          className="icon-btn save"
-                          onClick={handleSaveClick}
-                        >
+                        <button className="icon-btn save" onClick={handleSaveClick}>
                           <i className="pi pi-check" />
                         </button>
-                        <button
-                          className="icon-btn cancel"
-                          onClick={handleCancelClick}
-                        >
+                        <button className="icon-btn cancel" onClick={handleCancelClick}>
                           <i className="pi pi-times" />
                         </button>
                       </>
                     ) : (
                       <>
-                        <button
-                          className="icon-btn edit"
-                          onClick={() => handleEditClick(u)}
-                        >
+                        <button className="icon-btn edit" onClick={() => handleEditClick(u)}>
                           <i className="pi pi-pencil" />
                         </button>
                         <button
                           className="icon-btn toggle"
                           onClick={() => openConfirmDialog(u, "block")}
+                          disabled={editingRowId === u.id}
                         >
                           {u.status === "blocked" ? (
                             <i className="pi pi-unlock" />
@@ -500,12 +531,9 @@ const handleFilterChange = (key, selectedOption) => {
                           )}
                         </button>
                         <button
-                          className={`icon-btn delete ${
-                            u.status === "deleted" ? "disabled" : ""
-                          }`}
+                          className={`icon-btn delete ${u.status === "deleted" ? "disabled" : ""}`}
                           onClick={() => {
-                            if (u.status !== "deleted")
-                              openConfirmDialog(u, "delete");
+                            if (u.status !== "deleted") openConfirmDialog(u, "delete");
                           }}
                           disabled={u.status === "deleted"}
                         >
@@ -519,7 +547,6 @@ const handleFilterChange = (key, selectedOption) => {
             )}
           </tbody>
         </table>
-        {/* Pagination Controls */}
         {!searchedUser && pagination.totalPages > 1 && (
           <Stack spacing={2} alignItems="center" sx={{ marginTop: "10px" }}>
             <Pagination

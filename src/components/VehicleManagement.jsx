@@ -109,37 +109,50 @@ const VehicleManagement = ({
     "jdRetailValue",
   ];
 
-  const validateForm = (data) => {
-    const errors = {};
-    if (!data.auctionDate) errors.auctionDate = "Auction date is required";
-    if (!data.vehicleYear) errors.vehicleYear = "Vehicle year is required";
-    else if (!/^\d{4}$/.test(data.vehicleYear))
-      errors.vehicleYear = "Enter a valid year";
-    if (!data.make) errors.make = "Make is required";
-    if (!data.series) errors.series = "Series is required";
-    if (!data.modelNumber) errors.modelNumber = "Model number is required";
-    if (!data.engine) errors.engine = "Engine info is required";
-    if (!data.odometer && data.odometer !== 0)
-      errors.odometer = "Odometer reading is required";
-    else if (isNaN(data.odometer))
-      errors.odometer = "Odometer must be a number";
-    if (!data.color) errors.color = "Color is required";
-    if (!data.auctionLocation) errors.auctionLocation = "Location is required";
-    if (!data.crValue) errors.crValue = "CR Value is required";
-    if (!data.auctionSalePrice && data.auctionSalePrice !== 0)
-      errors.auctionSalePrice = "Sale price is required";
-    else if (isNaN(data.auctionSalePrice))
-      errors.auctionSalePrice = "Sale price must be a number";
-    if (!data.jdWholesaleValue && data.jdWholesaleValue !== 0)
-      errors.jdWholesaleValue = "Wholesale value is required";
-    else if (isNaN(data.jdWholesaleValue))
-      errors.jdWholesaleValue = "Wholesale value must be a number";
-    if (!data.jdRetailValue && data.jdRetailValue !== 0)
-      errors.jdRetailValue = "Retail value is required";
-    else if (isNaN(data.jdRetailValue))
-      errors.jdRetailValue = "Retail value must be a number";
-    return errors;
+ const validateForm = (data) => {
+  const errors = {};
+
+  // Helper functions
+  const isValidDate = (dateString) => {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
   };
+
+  const isPositiveNumber = (val) =>
+    val !== "" && !isNaN(val) && Number(val) >= 0;
+
+  const isNonEmptyText = (val) =>
+    typeof val === "string" && val.trim().length > 0;
+
+  // Date validation
+  if (!isNonEmptyText(data.auctionDate)) {
+    errors.auctionDate = "Auction date is required";
+  } else if (!isValidDate(data.auctionDate)) {
+    errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
+  }
+
+  // Year validation
+  if (!data.vehicleYear) {
+    errors.vehicleYear = "Vehicle year is required";
+  } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
+    errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
+  }
+
+  // Text fields
+  ["make", "series", "modelNumber", "engine", "color", "auctionLocation", "crValue"].forEach((field) => {
+    if (!isNonEmptyText(data[field])) errors[field] = `${field} is required`;
+  });
+
+  // Numeric fields (must be >= 0)
+  ["odometer", "auctionSalePrice", "jdWholesaleValue", "jdRetailValue"].forEach((field) => {
+    if (data[field] === "" || data[field] === null || data[field] === undefined)
+      errors[field] = `${field} is required`;
+    else if (!isPositiveNumber(data[field]))
+      errors[field] = `${field} must be a valid number ≥ 0`;
+  });
+
+  return errors;
+};
 
   const [form, setForm] = useState({
     auctionDate: "",
@@ -561,10 +574,19 @@ const VehicleManagement = ({
           {Object.keys(form).map((key) => (
             <div className="form-group" key={key}>
               <label>{key}</label>
-              <InputText
-                value={form[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-              />
+             <InputText
+  type={key.includes("Date") ? "date" : key.match(/Price|Value|odometer|Year/) ? "number" : "text"}
+  value={form[key]}
+  onChange={(e) => {
+    // Prevent negative input manually too
+    const val = e.target.value;
+    if (key.match(/Price|Value|odometer|Year/) && Number(val) < 0) return;
+    setForm({ ...form, [key]: val });
+  }}
+  min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+/>
+
+
               {formErrors[key] && (
                 <small style={{ color: "red" }}>{formErrors[key]}</small>
               )}
@@ -573,36 +595,86 @@ const VehicleManagement = ({
           <Button label="Save" className="btn save" onClick={handleAddSubmit} />
         </div>
       </Dialog>
-      <Dialog
-        header="Edit Vehicle"
-        visible={showEditModal}
-        style={{ width: "40vw" }}
-        onHide={() => setShowEditModal(false)}
+<Dialog
+  header="✏️ Edit Vehicle Details"
+  visible={showEditModal}
+  style={{ width: "45vw", maxWidth: "700px" }}
+  onHide={() => setShowEditModal(false)}
+>
+  {editData && (
+    <div
+      className="edit-vehicle-form"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "1rem",
+        padding: "10px 0",
+      }}
+    >
+      {editableFields.map((key) => (
+        <div key={key} style={{ display: "flex", flexDirection: "column" }}>
+          <label
+            style={{
+              fontWeight: "600",
+              textTransform: "capitalize",
+              marginBottom: "4px",
+            }}
+          >
+            {key.replace(/([A-Z])/g, " $1")}
+          </label>
+         <InputText
+  type={
+    key.includes("Date")
+      ? "date"
+      : key.match(/Price|Value|odometer|Year/)
+      ? "number"
+      : "text"
+  }
+  value={editData[key] || ""}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (key.match(/Price|Value|odometer|Year/) && Number(val) < 0) return;
+    setEditData({ ...editData, [key]: val });
+  }}
+  min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+  style={{
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+  }}
+/>
+
+          {formErrors[key] && (
+            <small style={{ color: "red", marginTop: "4px" }}>
+              {formErrors[key]}
+            </small>
+          )}
+        </div>
+      ))}
+
+      <div
+        style={{
+          gridColumn: "1 / -1",
+          textAlign: "right",
+          marginTop: "1.5rem",
+        }}
       >
-        {editData && (
-          <div className="add-user-form">
-            {editableFields.map((key) => (
-              <div className="form-group" key={key}>
-                <label>{key}</label>
-                <InputText
-                  value={editData[key] || ""}
-                  onChange={(e) =>
-                    setEditData({ ...editData, [key]: e.target.value })
-                  }
-                />
-                {formErrors[key] && (
-                  <small style={{ color: "red" }}>{formErrors[key]}</small>
-                )}
-              </div>
-            ))}
-            <Button
-              label="Update"
-              className="btn save"
-              onClick={handleEditSubmit}
-            />
-          </div>
-        )}
-      </Dialog>
+        <Button
+          label="Update Vehicle"
+          icon="pi pi-check"
+          className="p-button-success"
+          onClick={handleEditSubmit}
+          style={{
+            padding: "8px 20px",
+            fontWeight: "600",
+            borderRadius: "8px",
+          }}
+        />
+      </div>
+    </div>
+  )}
+</Dialog>
+
       <Dialog
         header="📋 Bulk Insertions"
         visible={showListModal}
