@@ -15,7 +15,7 @@ const ProfileAndPassword = () => {
   const [loadingPassword, setLoadingPassword] = useState(false);
   const toast = useRef(null);
 
-  // ✅ Toast handler
+  // Toast handler
   const showToast = (type, summary, detail) => {
     toast.current.show({
       severity: type,
@@ -25,7 +25,7 @@ const ProfileAndPassword = () => {
     });
   };
 
-  // ✅ Fetch profile
+  // Fetch profile
   const fetchProfile = async () => {
     try {
       const res = await axios.get("/auth/profile");
@@ -44,12 +44,44 @@ const ProfileAndPassword = () => {
     fetchProfile();
   }, []);
 
+  // Password validation logic
+  const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length < minLength) {
+      return "Password must be at least 8 characters long.";
+    }
+    if (!hasUpperCase) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    if (!hasLowerCase) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    if (!hasNumber) {
+      return "Password must contain at least one number.";
+    }
+    if (!hasSpecialChar) {
+      return "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>).";
+    }
+    return null;
+  };
+
   // Handle password change
   const handleChangePassword = async (e) => {
     e.preventDefault();
 
-    if (!currentPassword || !newPassword)
+    if (!currentPassword || !newPassword) {
       return showToast("warn", "Missing Fields", "Please fill in all fields.");
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return showToast("warn", "Invalid Password", passwordError);
+    }
 
     setLoadingPassword(true);
     try {
@@ -75,7 +107,7 @@ const ProfileAndPassword = () => {
 
   return (
     <div className="content-profile">
-      {/* ✅ Toast Notification */}
+      {/* Toast Notification */}
       <Toast ref={toast} />
 
       {/* Profile Section */}

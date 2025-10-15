@@ -652,3 +652,40 @@ tbody tr:hover {
 .history-value {
   color: #475569;
 }
+
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 8px;
+  min-height: 40px; /* Ensure visibility even with few buttons */
+}
+.ellipsis {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #111827;
+}
+.pagination-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: #e5e7eb;
+  color: #111827;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+.pagination-btn:hover:not(:disabled) {
+  background-color: #d1d5db;
+}
+.pagination-btn.active {
+  background-color: #2563eb;
+  color: white;
+}
+.pagination-btn:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}

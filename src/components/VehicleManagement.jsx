@@ -2,9 +2,45 @@ import { useRef, useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import { toast } from "react-toastify";
+
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+const getPageList = (current, total, maxButtons = 5) => {
+  const pages = [];
+  const half = Math.floor(maxButtons / 2);
+
+  if (total <= maxButtons + 2) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    let start = Math.max(2, current - half);
+    let end = Math.min(total - 1, current + half);
+    if (current - 1 <= half) {
+      start = 2;
+      end = 1 + maxButtons;
+    }
+    if (total - current <= half) {
+      end = total - 1;
+      start = total - maxButtons;
+    }
+    if (start > 2) pages.push("…");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push("…");
+    pages.push(total);
+  }
+  return pages;
+};
 
 const VehicleManagement = ({
   vehicleData,
+  fullVehicleData,
   addVehicle,
   editVehicle,
   deleteVehicle,
@@ -12,20 +48,98 @@ const VehicleManagement = ({
   getRowHistory,
   listBulkInsertions,
   deleteBulkInsertion,
+  vehiclePagination,
+  vehicleFilters,
+  setVehicleFilters,
+  fetchVehicles,
+  vehicleLoading,
 }) => {
   const fileInputRef = useRef(null);
-
-  // Modal States
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-
   const [editData, setEditData] = useState(null);
   const [bulkList, setBulkList] = useState([]);
   const [rowHistory, setRowHistory] = useState([]);
   const [deleteBatchId, setDeleteBatchId] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+  const [yearOptions, setYearOptions] = useState([]);
+  const [makeOptions, setMakeOptions] = useState([]);
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [modelOptions, setModelOptions] = useState([]);
+
+  useEffect(() => {
+    if (fullVehicleData && fullVehicleData.length > 0) {
+      const uniqueYears = [
+        ...new Set(fullVehicleData.map((v) => v.vehicleYear).filter(Boolean)),
+      ].sort();
+      const uniqueMakes = [
+        ...new Set(fullVehicleData.map((v) => v.make).filter(Boolean)),
+      ].sort();
+      const uniqueLocations = [
+        ...new Set(fullVehicleData.map((v) => v.auctionLocation).filter(Boolean)),
+      ].sort();
+      const uniqueModels = [
+        ...new Set(fullVehicleData.map((v) => v.modelNumber).filter(Boolean)),
+      ].sort();
+      setYearOptions(uniqueYears);
+      setMakeOptions(uniqueMakes);
+      setLocationOptions(uniqueLocations);
+      setModelOptions(uniqueModels);
+    }
+  }, [fullVehicleData]);
+
+  const editableFields = [
+    "auctionDate",
+    "vehicleYear",
+    "make",
+    "series",
+    "modelNumber",
+    "engine",
+    "odometer",
+    "color",
+    "auctionLocation",
+    "crValue",
+    "auctionSalePrice",
+    "jdWholesaleValue",
+    "jdRetailValue",
+  ];
+
+  const validateForm = (data) => {
+    const errors = {};
+    if (!data.auctionDate) errors.auctionDate = "Auction date is required";
+    if (!data.vehicleYear) errors.vehicleYear = "Vehicle year is required";
+    else if (!/^\d{4}$/.test(data.vehicleYear))
+      errors.vehicleYear = "Enter a valid year";
+    if (!data.make) errors.make = "Make is required";
+    if (!data.series) errors.series = "Series is required";
+    if (!data.modelNumber) errors.modelNumber = "Model number is required";
+    if (!data.engine) errors.engine = "Engine info is required";
+    if (!data.odometer && data.odometer !== 0)
+      errors.odometer = "Odometer reading is required";
+    else if (isNaN(data.odometer))
+      errors.odometer = "Odometer must be a number";
+    if (!data.color) errors.color = "Color is required";
+    if (!data.auctionLocation) errors.auctionLocation = "Location is required";
+    if (!data.crValue) errors.crValue = "CR Value is required";
+    if (!data.auctionSalePrice && data.auctionSalePrice !== 0)
+      errors.auctionSalePrice = "Sale price is required";
+    else if (isNaN(data.auctionSalePrice))
+      errors.auctionSalePrice = "Sale price must be a number";
+    if (!data.jdWholesaleValue && data.jdWholesaleValue !== 0)
+      errors.jdWholesaleValue = "Wholesale value is required";
+    else if (isNaN(data.jdWholesaleValue))
+      errors.jdWholesaleValue = "Wholesale value must be a number";
+    if (!data.jdRetailValue && data.jdRetailValue !== 0)
+      errors.jdRetailValue = "Retail value is required";
+    else if (isNaN(data.jdRetailValue))
+      errors.jdRetailValue = "Retail value must be a number";
+    return errors;
+  };
 
   const [form, setForm] = useState({
     auctionDate: "",
@@ -43,83 +157,140 @@ const VehicleManagement = ({
     jdRetailValue: "",
   });
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    bulkInsertVehicles(file);
-    e.target.value = null;
+    if (!file) return;
+    setIsUploading(true);
+    setUploadProgress(0);
+    const formData = new FormData();
+    formData.append("csvFile", file);
+    try {
+      await bulkInsertVehicles(formData, (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        setUploadProgress(percentCompleted);
+      });
+      alert("✅ CSV uploaded successfully!");
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("❌ CSV upload failed. Check console for details.");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      e.target.value = null;
+    }
   };
 
-const handleAddSubmit = async () => {
-  try {
-    await addVehicle(form);
-    setShowAddModal(false);
-    setForm({
-      auctionDate: "",
-      vehicleYear: "",
-      make: "",
-      series: "",
-      modelNumber: "",
-      engine: "",
-      odometer: "",
-      color: "",
-      auctionLocation: "",
-      crValue: "",
-      auctionSalePrice: "",
-      jdWholesaleValue: "",
-      jdRetailValue: "",
-    });
-  } catch (err) {
-    console.error("Error submitting form:", err);
-  }
-};
+  const handleAddSubmit = async () => {
+    const errors = validateForm(form);
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    try {
+      await addVehicle(form);
+      toast.success("✅ Vehicle added successfully!");
+      setShowAddModal(false);
+      setForm({
+        auctionDate: "",
+        vehicleYear: "",
+        make: "",
+        series: "",
+        modelNumber: "",
+        engine: "",
+        odometer: "",
+        color: "",
+        auctionLocation: "",
+        crValue: "",
+        auctionSalePrice: "",
+        jdWholesaleValue: "",
+        jdRetailValue: "",
+      });
+      setFormErrors({});
+    } catch (err) {
+      console.error("Error submitting form:", err);
+      toast.error("❌ Failed to add vehicle.");
+    }
+  };
 
-const handleEditSubmit = async () => {
-  try {
-    await editVehicle(editData);
-    setShowEditModal(false);
-  } catch (err) {
-    console.error("Error submitting edit form:", err);
-  }
-};
+  const handleEditSubmit = async () => {
+    const relevantData = {
+      auctionDate: editData.auctionDate,
+      vehicleYear: editData.vehicleYear,
+      make: editData.make,
+      series: editData.series,
+      modelNumber: editData.modelNumber,
+      engine: editData.engine,
+      odometer: editData.odometer,
+      color: editData.color,
+      auctionLocation: editData.auctionLocation,
+      crValue: editData.crValue,
+      auctionSalePrice: editData.auctionSalePrice,
+      jdWholesaleValue: editData.jdWholesaleValue,
+      jdRetailValue: editData.jdRetailValue,
+    };
+    const errors = validateForm(relevantData);
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    try {
+      await editVehicle(editData);
+      setShowEditModal(false);
+      setFormErrors({});
+    } catch (err) {
+      console.error("Error submitting edit form:", err);
+    }
+  };
 
-const handleListBulkInsertions = async () => {
-  const data = await listBulkInsertions();
-  setBulkList(data || []);
-  setShowListModal(true);
-};
+  const handleListBulkInsertions = async () => {
+    const data = await listBulkInsertions();
+    setBulkList(data || []);
+    setShowListModal(true);
+  };
 
-const handleDeleteBatch = () => {
+  const handleDeleteBatch = () => {
     if (deleteBatchId.trim()) deleteBulkInsertion(deleteBatchId);
     setShowDeleteModal(false);
   };
 
-const [selectedVehicleId, setSelectedVehicleId] = useState(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
 
-const handleRowHistory = async (id) => {
-  setSelectedVehicleId(id);
-  const history = await getRowHistory(id);
-  setRowHistory(history || []);
-  setShowHistoryModal(true);
-};
+  const handleRowHistory = async (id) => {
+    setSelectedVehicleId(id);
+    const history = await getRowHistory(id);
+    setRowHistory(history || []);
+    setShowHistoryModal(true);
+  };
 
-const handleRevert = async (previousData) => {
-  if (!window.confirm("Are you sure you want to revert to this version?")) return;
+  const handleRevert = async (previousData) => {
+    if (!window.confirm("Are you sure you want to revert to this version?"))
+      return;
+    try {
+      await editVehicle({ id: selectedVehicleId, ...previousData });
+      alert("✅ Vehicle reverted successfully!");
+      setShowHistoryModal(false);
+    } catch (err) {
+      console.error("Failed to revert:", err);
+      alert("❌ Failed to revert vehicle.");
+    }
+  };
 
-  try {
-    await editVehicle({ id: selectedVehicleId, ...previousData });
-    alert("✅ Vehicle reverted successfully!");
-    setShowHistoryModal(false); // close modal
-  } catch (err) {
-    console.error("Failed to revert:", err);
-    alert("❌ Failed to revert vehicle.");
-  }
-};
+  const debouncedFetchVehicles = useRef(
+    debounce((filters) => {
+      fetchVehicles(filters);
+    }, 300)
+  ).current;
+
+  useEffect(() => {
+    debouncedFetchVehicles(vehicleFilters);
+  }, [vehicleFilters, debouncedFetchVehicles]);
 
   return (
     <section className="content-section">
       <div className="crud-actions">
-        <h1 className="section-title">Vehicle Data</h1>
-        <div className="action-buttons" style={{ display: "flex", gap: "10px" }}>
+        <h1 className="section-title">Vehicle Management</h1>
+        <div
+          className="action-buttons"
+          style={{ display: "flex", gap: "10px" }}
+        >
           <button className="btn add-row" onClick={() => setShowAddModal(true)}>
             ➕ Add Vehicle
           </button>
@@ -135,16 +306,124 @@ const handleRevert = async (previousData) => {
             ref={fileInputRef}
             style={{ display: "none" }}
             onChange={handleFileChange}
-          /> 
-          <button className="btn list-batches" onClick={handleListBulkInsertions}>
+          />
+          <button
+            className="btn list-batches"
+            onClick={handleListBulkInsertions}
+          >
             📋 List Bulk
           </button>
         </div>
       </div>
-
+      {isUploading && (
+        <div style={{ width: "100%", marginTop: "10px" }}>
+          <div
+            style={{
+              height: "8px",
+              width: "100%",
+              backgroundColor: "#e5e7eb",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${uploadProgress}%`,
+                backgroundColor: "#2563eb",
+                transition: "width 0.2s",
+              }}
+            ></div>
+          </div>
+          <p
+            style={{ fontSize: "12px", textAlign: "center", marginTop: "4px" }}
+          >
+            Uploading: {uploadProgress}%
+          </p>
+        </div>
+      )}
       <p className="section-subtitle">View, Edit and Add Vehicle Details</p>
-
       <div className="table-container">
+        <div
+          className="filter-bar"
+          style={{ display: "flex", gap: "10px", margin: "15px 0", flexWrap: "wrap" }}
+        >
+          <select
+            value={vehicleFilters.year}
+            onChange={(e) =>
+              setVehicleFilters({ ...vehicleFilters, year: e.target.value, page: 1 })
+            }
+            style={{ width: "120px" }}
+          >
+            <option value="">All Years</option>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          <select
+            value={vehicleFilters.make}
+            onChange={(e) =>
+              setVehicleFilters({ ...vehicleFilters, make: e.target.value, page: 1 })
+            }
+            style={{ width: "150px" }}
+          >
+            <option value="">All Makes</option>
+            {makeOptions.map((make) => (
+              <option key={make} value={make}>
+                {make}
+              </option>
+            ))}
+          </select>
+          <select
+            value={vehicleFilters.location}
+            onChange={(e) =>
+              setVehicleFilters({ ...vehicleFilters, location: e.target.value, page: 1 })
+            }
+            style={{ width: "150px" }}
+          >
+            <option value="">All Locations</option>
+            {locationOptions.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
+          <select
+            value={vehicleFilters.modelNumber}
+            onChange={(e) =>
+              setVehicleFilters({ ...vehicleFilters, modelNumber: e.target.value, page: 1 })
+            }
+            style={{ width: "150px" }}
+          >
+            <option value="">All Models</option>
+            {modelOptions.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+          <select
+            value={vehicleFilters.sortBy}
+            onChange={(e) =>
+              setVehicleFilters({ ...vehicleFilters, sortBy: e.target.value, page: 1 })
+            }
+          >
+            <option value="modelNumber">Sort by Model Number</option>
+            <option value="auctionDate">Sort by Date</option>
+            <option value="auctionSalePrice">Sort by Price</option>
+          </select>
+          <select
+            value={vehicleFilters.sortOrder}
+            onChange={(e) =>
+              setVehicleFilters({ ...vehicleFilters, sortOrder: e.target.value, page: 1 })
+            }
+          >
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
         <table>
           <thead>
             <tr>
@@ -165,7 +444,13 @@ const handleRevert = async (previousData) => {
             </tr>
           </thead>
           <tbody>
-            {vehicleData?.length > 0 ? (
+            {vehicleLoading ? (
+              <tr>
+                <td colSpan="14" style={{ textAlign: "center" }}>
+                  Loading vehicles...
+                </td>
+              </tr>
+            ) : vehicleData?.length > 0 ? (
               vehicleData.map((v) => (
                 <tr key={v.id}>
                   <td>{v.auctionDate}</td>
@@ -215,9 +500,57 @@ const handleRevert = async (previousData) => {
             )}
           </tbody>
         </table>
+        <div className="pagination-container">
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              if (vehiclePagination.currentPage > 1) {
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  page: vehiclePagination.currentPage - 1,
+                });
+              }
+            }}
+            disabled={vehiclePagination.currentPage === 1}
+          >
+            ←
+          </button>
+          {getPageList(vehiclePagination.currentPage, vehiclePagination.totalPages, 5).map(
+            (p, idx) =>
+              p === "…" ? (
+                <span key={`el-${idx}`} className="ellipsis">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  className={`pagination-btn ${
+                    vehiclePagination.currentPage === p ? "active" : ""
+                  }`}
+                  onClick={() => {
+                    setVehicleFilters({ ...vehicleFilters, page: p });
+                  }}
+                >
+                  {p}
+                </button>
+              )
+          )}
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              if (vehiclePagination.currentPage < vehiclePagination.totalPages) {
+                setVehicleFilters({
+                  ...vehicleFilters,
+                  page: vehiclePagination.currentPage + 1,
+                });
+              }
+            }}
+            disabled={vehiclePagination.currentPage === vehiclePagination.totalPages}
+          >
+            →
+          </button>
+        </div>
       </div>
-
-      {/* Add Vehicle Modal */}
       <Dialog
         header="Add New Vehicle"
         visible={showAddModal}
@@ -232,13 +565,14 @@ const handleRevert = async (previousData) => {
                 value={form[key]}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               />
+              {formErrors[key] && (
+                <small style={{ color: "red" }}>{formErrors[key]}</small>
+              )}
             </div>
           ))}
           <Button label="Save" className="btn save" onClick={handleAddSubmit} />
         </div>
       </Dialog>
-
-      {/* Edit Vehicle Modal */}
       <Dialog
         header="Edit Vehicle"
         visible={showEditModal}
@@ -247,74 +581,77 @@ const handleRevert = async (previousData) => {
       >
         {editData && (
           <div className="add-user-form">
-            {Object.keys(editData).map((key) => (
+            {editableFields.map((key) => (
               <div className="form-group" key={key}>
                 <label>{key}</label>
                 <InputText
-                  value={editData[key]}
+                  value={editData[key] || ""}
                   onChange={(e) =>
                     setEditData({ ...editData, [key]: e.target.value })
                   }
                 />
+                {formErrors[key] && (
+                  <small style={{ color: "red" }}>{formErrors[key]}</small>
+                )}
               </div>
             ))}
-            <Button label="Update" className="btn save" onClick={handleEditSubmit} />
+            <Button
+              label="Update"
+              className="btn save"
+              onClick={handleEditSubmit}
+            />
           </div>
         )}
       </Dialog>
-
-      {/* List Bulk Modal */}
-<Dialog
-  header="📋 Bulk Insertions"
-  visible={showListModal}
-  style={{ width: "60vw" }}
-  onHide={() => setShowListModal(false)}
->
-  {bulkList.length > 0 ? (
-    <div className="bulk-list-table-container">
-      <table className="bulk-list-table">
-        <thead>
-          <tr>
-            <th>Batch ID</th>
-            <th>Record Count</th>
-            <th>Status</th>
-            <th>Created On</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bulkList.map((batch) => (
-            <tr key={batch.batchId}>
-              <td>{batch.batchId}</td>
-              <td>{batch.recordCount}</td>
-              <td>
-                <span className="status-badge status-success">
-                  {batch.status}
-                </span>
-              </td>
-              <td>{new Date(batch.createdAt).toLocaleString()}</td>
-              <td>
-                <Button
-                  label="Delete"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  onClick={() => deleteBulkInsertion(batch.batchId)}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <p style={{ textAlign: "center", padding: "20px" }}>
-      No bulk insertions found.
-    </p>
-  )}
-</Dialog>
-
-      {/* Delete Bulk Modal */}
+      <Dialog
+        header="📋 Bulk Insertions"
+        visible={showListModal}
+        style={{ width: "60vw" }}
+        onHide={() => setShowListModal(false)}
+      >
+        {bulkList.length > 0 ? (
+          <div className="bulk-list-table-container">
+            <table className="bulk-list-table">
+              <thead>
+                <tr>
+                  <th>Batch ID</th>
+                  <th>Record Count</th>
+                  <th>Status</th>
+                  <th>Created On</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bulkList.map((batch) => (
+                  <tr key={batch.batchId}>
+                    <td>{batch.batchId}</td>
+                    <td>{batch.recordCount}</td>
+                    <td>
+                      <span className="status-badge status-success">
+                        {batch.status}
+                      </span>
+                    </td>
+                    <td>{new Date(batch.createdAt).toLocaleString()}</td>
+                    <td>
+                      <Button
+                        label="Delete"
+                        icon="pi pi-trash"
+                        severity="danger"
+                        text
+                        onClick={() => deleteBulkInsertion(batch.batchId)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p style={{ textAlign: "center", padding: "20px" }}>
+            No bulk insertions found.
+          </p>
+        )}
+      </Dialog>
       <Dialog
         header="Delete Bulk Insertion"
         visible={showDeleteModal}
@@ -326,62 +663,65 @@ const handleRevert = async (previousData) => {
           value={deleteBatchId}
           onChange={(e) => setDeleteBatchId(e.target.value)}
         />
-        <Button label="Delete" className="btn save" onClick={handleDeleteBatch} />
+        <Button
+          label="Delete"
+          className="btn save"
+          onClick={handleDeleteBatch}
+        />
       </Dialog>
-
-{/* Row History Modal */}
-<Dialog
-  header="🕒 Vehicle Row History"
-  visible={showHistoryModal}
-  style={{ width: "65vw" }}
-  onHide={() => setShowHistoryModal(false)}
->
-  {rowHistory.length > 0 ? (
-    <div className="row-history-container">
-{rowHistory.map((entry, index) => (
-  <div key={index} className="history-entry">
-    <div className="history-meta">
-      <p><strong>Updated By:</strong> {entry.user?.name} ({entry.user?.email})</p>
-      <p><strong>Updated On:</strong> {new Date(entry.updatedAt).toLocaleString()}</p>
-    </div>
-
-    <table className="history-table">
-      <thead>
-        <tr>
-          <th>Field</th>
-          <th>New Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        {Object.entries(entry.changes || {}).map(([key, value]) => (
-          <tr key={key}>
-            <td className="history-key">{key}</td>
-            <td className="history-value">{String(value)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-
-    {/* ✅ Add the Revert Button Here */}
-    <div style={{ textAlign: "right", marginTop: "10px" }}>
-      <Button
-        label="↩️ Revert to This Version"
-        severity="warning"
-        onClick={() => handleRevert(entry.changes)} 
-      />
-    </div>
-
-    <hr style={{ margin: "20px 0" }} />
-  </div>
-))}
-
-    </div>
-  ) : (
-    <p style={{ textAlign: "center", padding: "20px" }}>
-      No history found for this vehicle.
-    </p>
-  )}
-</Dialog>
+      <Dialog
+        header="🕒 Vehicle Row History"
+        visible={showHistoryModal}
+        style={{ width: "65vw" }}
+        onHide={() => setShowHistoryModal(false)}
+      >
+        {rowHistory.length > 0 ? (
+          <div className="row-history-container">
+            {rowHistory.map((entry, index) => (
+              <div key={index} className="history-entry">
+                <div className="history-meta">
+                  <p>
+                    <strong>Updated By:</strong> {entry.user?.name} (
+                    {entry.user?.email})
+                  </p>
+                  <p>
+                    <strong>Updated On:</strong>{" "}
+                    {new Date(entry.updatedAt).toLocaleString()}
+                  </p>
+                </div>
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>New Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(entry.changes || {}).map(([key, value]) => (
+                      <tr key={key}>
+                        <td className="history-key">{key}</td>
+                        <td className="history-value">{String(value)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ textAlign: "right", marginTop: "10px" }}>
+                  <Button
+                    label="↩️ Revert to This Version"
+                    severity="warning"
+                    onClick={() => handleRevert(entry.changes)}
+                  />
+                </div>
+                <hr style={{ margin: "20px 0" }} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ textAlign: "center", padding: "20px" }}>
+            No history found for this vehicle.
+          </p>
+        )}
+      </Dialog>
     </section>
   );
 };

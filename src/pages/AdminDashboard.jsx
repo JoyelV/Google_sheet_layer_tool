@@ -5,31 +5,81 @@ import UserManagement from "../components/UserManagement";
 import VehicleManagement from "../components/VehicleManagement";
 import axios from "../api/axiosInstance";
 import ProfileAndPassword from "../components/ProfileAndPassword";
+import "react-toastify/dist/ReactToastify.css";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("data");
   const [users, setUsers] = useState([]);
   const [vehicleData, setVehicleData] = useState([]);
+  const [fullVehicleData, setFullVehicleData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalUsers: 0, limit: 10 });
-  const [filters, setFilters] = useState({ page: 1, limit: 10, role: "", status: "", search: "" });
+  const [vehicleLoading, setVehicleLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalUsers: 0,
+    limit: 10,
+  });
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 10,
+    role: "",
+    status: "",
+    search: "",
+  });
+  const [vehicleFilters, setVehicleFilters] = useState({
+    page: 1,
+    limit: 10,
+    year: "",
+    make: "",
+    location: "",
+    modelNumber: "",
+    sortBy: "modelNumber",
+    sortOrder: "desc",
+  });
+  const [vehiclePagination, setVehiclePagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalVehicles: 0,
+    limit: 10,
+  });
+
   const storedUser = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
-  // FETCH USERS
-  const fetchUsers = async ({ page = 1, limit = 10, role = "", status = "", search = "" }) => {
+  const fetchUsers = async ({
+    page = 1,
+    limit = 10,
+    role = "",
+    status = "",
+    search = "",
+  }) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(search)}`);
-      console.log(res, "users");
-
+      const res = await axios.get(
+        `/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
+          search
+        )}`
+      );
       if (res.data.success) {
         setUsers(res.data.data.users || []);
-        setPagination(res.data.data.pagination || { currentPage: page, totalPages: 1, totalUsers: 0, limit });
+        setPagination(
+          res.data.data.pagination || {
+            currentPage: page,
+            totalPages: 1,
+            totalUsers: 0,
+            limit,
+          }
+        );
       } else {
         setUsers([]);
-        setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
+        setPagination({
+          currentPage: page,
+          totalPages: 1,
+          totalUsers: 0,
+          limit,
+        });
         console.error("Failed to fetch users:", res.data.message);
       }
     } catch (err) {
@@ -41,65 +91,113 @@ const AdminDashboard = () => {
     }
   };
 
-  // FETCH VEHICLES
-  const fetchVehicles = async () => {
+  const fetchVehicles = async (filters = vehicleFilters) => {
+    setVehicleLoading(true);
     try {
-      const res = await axios.get("/vehicles/all");
-      console.log("Full response:", res);
-      const vehicles = res?.data?.data?.vehicles || res?.data?.vehicles || [];
-      console.log("vehicles:", vehicles);
+      const queryObj = {
+        page: filters.page,
+        limit: filters.limit,
+        year: filters.year,
+        make: filters.make,
+        location: filters.location,
+        modelNumber: filters.modelNumber,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+      };
+      const queryParams = new URLSearchParams(
+        Object.entries(queryObj).filter(([_, v]) => v !== "")
+      ).toString();
+      const res = await axios.get(`/vehicles/all?${queryParams}`);
+      console.log("API Response:", res.data);
+      const vehicles = res?.data?.vehicles || [];
       setVehicleData(vehicles);
+
+      const total = res?.data?.pagination?.total || vehicles.length;
+      const backendTotalPages = res?.data?.pagination?.totalPages || Math.ceil(total / filters.limit);
+      console.log("Total vehicles:", total, "Limit:", filters.limit, "Total pages:", backendTotalPages);
+
+      setVehiclePagination({
+        currentPage: filters.page,
+        totalPages: backendTotalPages,
+        totalVehicles: total,
+        limit: filters.limit,
+      });
+
+      if (
+        !filters.year &&
+        !filters.make &&
+        !filters.location &&
+        !filters.modelNumber
+      ) {
+        setFullVehicleData(vehicles);
+      }
     } catch (err) {
       console.error("Error fetching vehicles:", err);
       setVehicleData([]);
+      setVehiclePagination({
+        currentPage: filters.page,
+        totalPages: 1,
+        totalVehicles: 0,
+        limit: filters.limit,
+      });
+    } finally {
+      setVehicleLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchUsers(filters);
-    fetchVehicles();
-  }, []);
-
-  // ADD VEHICLE
-const addVehicle = async (formData) => {
-  try {
-    const res = await axios.post("/vehicles/insert", formData);
-
-    if (res.data?.success) {
-      alert("✅ Vehicle added successfully!");
-      fetchVehicles();
-    } else {
-      alert(res.data?.message || "❌ Failed to add vehicle.");
+  const fetchFullVehicles = async () => {
+    try {
+      const queryObj = {
+        sortBy: "modelNumber",
+        sortOrder: "desc",
+      };
+      const queryParams = new URLSearchParams(
+        Object.entries(queryObj).filter(([_, v]) => v !== "")
+      ).toString();
+      const res = await axios.get(`/vehicles/all?${queryParams}`);
+      setFullVehicleData(res?.data?.vehicles || []);
+    } catch (err) {
+      console.error("Error fetching full vehicles:", err);
+      setFullVehicleData([]);
     }
-  } catch (err) {
-    console.error("Error adding vehicle:", err.response?.data || err.message);
-    alert("❌ Failed to add vehicle.");
-  }
-};
+  };
 
-// EDIT VEHICLE (updated)
-const editVehicle = async (updatedVehicle) => {
-  try {
-    const { id, ...data } = updatedVehicle; 
-    const res = await axios.put(`/vehicles/${id}`, data);
-
-    if (res.data?.success) {
-      alert("✅ Vehicle updated successfully!");
-      fetchVehicles();
-    } else {
-      alert(res.data?.message || "❌ Failed to update vehicle.");
+  const addVehicle = async (formData) => {
+    try {
+      const res = await axios.post("/vehicles/insert", formData);
+      if (res.data?.success) {
+        alert("✅ Vehicle added successfully!");
+        fetchVehicles();
+      } else {
+        alert(res.data?.message || "❌ Failed to add vehicle.");
+      }
+    } catch (err) {
+      console.error("Error adding vehicle:", err.response?.data || err.message);
+      alert("❌ Failed to add vehicle.");
     }
-  } catch (err) {
-    console.error("Error updating vehicle:", err.response?.data || err.message);
-    alert("❌ Failed to update vehicle.");
-  }
-};
+  };
 
-  // DELETE VEHICLE
+  const editVehicle = async (updatedVehicle) => {
+    try {
+      const { id, ...data } = updatedVehicle;
+      const res = await axios.put(`/vehicles/${id}`, data);
+      if (res.data?.success) {
+        alert("✅ Vehicle updated successfully!");
+        fetchVehicles();
+      } else {
+        alert(res.data?.message || "❌ Failed to update vehicle.");
+      }
+    } catch (err) {
+      console.error(
+        "Error updating vehicle:",
+        err.response?.data || err.message
+      );
+      alert("❌ Failed to update vehicle.");
+    }
+  };
+
   const deleteVehicle = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this vehicle?"))
-      return;
-
+    if (!window.confirm("Are you sure you want to delete this vehicle?")) return;
     try {
       await axios.delete(`/vehicles/${id}`);
       alert("🗑️ Vehicle deleted successfully!");
@@ -110,55 +208,40 @@ const editVehicle = async (updatedVehicle) => {
     }
   };
 
-  // BULK INSERT VEHICLES
-  const bulkInsertVehicles = async (file) => {
-    if (!file) return alert("No file selected");
-
-    const formData = new FormData();
-    formData.append("csvFile", file);
-
+  const bulkInsertVehicles = async (formData, onProgress) => {
     try {
       const res = await axios.post("/vehicles/bulk-insert", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: onProgress,
       });
-      console.log("Bulk insert response:", res.data);
-      alert("✅ Bulk insert successful!");
       fetchVehicles();
+      return res.data;
     } catch (err) {
       console.error("Error in bulk insert:", err.response?.data || err.message);
-      alert("❌ Bulk insert failed. See console for details.");
+      throw err;
     }
   };
 
-// LIST BULK INSERTIONS (corrected)
-const listBulkInsertions = async () => {
-  try {
-    const res = await axios.get("/vehicles/batches/list");
-    console.log("Bulk insertions:", res.data);
+  const listBulkInsertions = async () => {
+    try {
+      const res = await axios.get("/vehicles/batches/list");
+      const list = res.data?.data || [];
+      const formatted = list.map((batch) => ({
+        batchId: batch.batchId,
+        recordCount: batch.recordCount,
+        createdAt: batch.createdAt,
+        status: "Completed",
+      }));
+      return formatted;
+    } catch (err) {
+      console.error("Error listing bulk insertions:", err);
+      return [];
+    }
+  };
 
-    // ✅ Correctly extract the array
-    const list = res.data?.data || [];
-
-    // ✅ Map to consistent display structure for the UI
-    const formatted = list.map((batch) => ({
-      batchId: batch.batchId,
-      recordCount: batch.recordCount,
-      createdAt: batch.createdAt,
-      status: "Completed", // Add a static or derived value (since API doesn’t provide it)
-    }));
-
-    return formatted;
-  } catch (err) {
-    console.error("Error listing bulk insertions:", err);
-    return [];
-  }
-};
-
-  // DELETE BULK INSERTION
   const deleteBulkInsertion = async (batchId) => {
     if (!window.confirm("Are you sure you want to delete this bulk insertion?"))
       return;
-
     try {
       await axios.delete(`/vehicles/batch/${batchId}`);
       alert("🗑️ Bulk insertion deleted successfully!");
@@ -169,52 +252,26 @@ const listBulkInsertions = async () => {
     }
   };
 
-// GET ROW HISTORY (returns parsed history with user info)
-const getRowHistory = async (id) => {
-  try {
-    const res = await axios.get(`/vehicles/${id}/history`);
-    console.log(`History for vehicle ${id}:`, res.data);
-
-    const historyArray = res.data?.history || [];
-
-    const formatted = historyArray.map((item) => ({
-      updatedAt: item.createdAt,
-      action: item.action,
-      user: {
-        name: item.user?.name || "Unknown",
-        email: item.user?.email || "N/A",
-      },
-      changes: item.newValues || {},
-    }));
-
-    return formatted;
-  } catch (err) {
-    console.error("Error fetching row history:", err);
-    return [];
-  }
-};
-
-// REVERT VEHICLE CHANGES
-const revertVehicleToHistory = async (vehicleId, historyId) => {
-  if (!window.confirm("Are you sure you want to revert this vehicle to the selected version?"))
-    return;
-
-  try {
-    const res = await axios.post(`/vehicles/${vehicleId}/revert/${historyId}`);
-
-    if (res.data?.success) {
-      alert("✅ Vehicle reverted successfully!");
-      fetchVehicles(); // Refresh table
-    } else {
-      alert(res.data?.message || "❌ Failed to revert vehicle.");
+  const getRowHistory = async (id) => {
+    try {
+      const res = await axios.get(`/vehicles/${id}/history`);
+      const historyArray = res.data?.history || [];
+      const formatted = historyArray.map((item) => ({
+        updatedAt: item.createdAt,
+        action: item.action,
+        user: {
+          name: item.user?.name || "Unknown",
+          email: item.user?.email || "N/A",
+        },
+        changes: item.newValues || {},
+      }));
+      return formatted;
+    } catch (err) {
+      console.error("Error fetching row history:", err);
+      return [];
     }
-  } catch (err) {
-    console.error("Error reverting vehicle:", err.response?.data || err.message);
-    alert("❌ Failed to revert vehicle.");
-  }
-};
+  };
 
-  // USER CRUD
   const addUser = async (newUser) => {
     try {
       const res = await axios.post("/users/", newUser);
@@ -222,7 +279,10 @@ const revertVehicleToHistory = async (vehicleId, historyId) => {
         await fetchUsers(filters);
         return { success: true };
       }
-      return { success: false, message: res.data.message || "Failed to add user" };
+      return {
+        success: false,
+        message: res.data.message || "Failed to add user",
+      };
     } catch (err) {
       console.error("Error adding user:", err);
       return { success: false, message: "Server error" };
@@ -231,18 +291,19 @@ const revertVehicleToHistory = async (vehicleId, historyId) => {
 
   const editUser = async (user) => {
     const { id, name, email, role } = user;
-
     if (!name || !email || !role) {
       return { success: false, message: "Missing fields" };
     }
-
     try {
       const res = await axios.put(`/users/${id}`, { name, email, role });
       if (res.data.success) {
         await fetchUsers(filters);
         return { success: true, message: "User updated successfully" };
       } else {
-        return { success: false, message: res.data.message || "Failed to update user" };
+        return {
+          success: false,
+          message: res.data.message || "Failed to update user",
+        };
       }
     } catch (err) {
       console.error("Error updating user:", err);
@@ -269,7 +330,6 @@ const revertVehicleToHistory = async (vehicleId, historyId) => {
   const deleteUser = async (id) => {
     try {
       const res = await axios.delete(`/users/${id}`);
-      console.log(res, "deleteUser");
       await fetchUsers(filters);
       return { success: true };
     } catch (err) {
@@ -278,12 +338,19 @@ const revertVehicleToHistory = async (vehicleId, historyId) => {
     }
   };
 
+  useEffect(() => {
+    fetchUsers(filters);
+    fetchVehicles();
+    fetchFullVehicles();
+  }, []);
+
   const renderContent = () => {
     switch (activeTab) {
       case "data":
         return (
           <VehicleManagement
             vehicleData={vehicleData}
+            fullVehicleData={fullVehicleData}
             addVehicle={addVehicle}
             editVehicle={editVehicle}
             deleteVehicle={deleteVehicle}
@@ -291,9 +358,13 @@ const revertVehicleToHistory = async (vehicleId, historyId) => {
             getRowHistory={getRowHistory}
             listBulkInsertions={listBulkInsertions}
             deleteBulkInsertion={deleteBulkInsertion}
+            fetchVehicles={fetchVehicles}
+            vehicleFilters={vehicleFilters}
+            setVehicleFilters={setVehicleFilters}
+            vehiclePagination={vehiclePagination}
+            vehicleLoading={vehicleLoading}
           />
         );
-
       case "users":
         return currentUser?.role === "admin" ? (
           <UserManagement
@@ -313,10 +384,8 @@ const revertVehicleToHistory = async (vehicleId, historyId) => {
             ❌ Access denied. Only admins can view this section.
           </p>
         );
-
       case "profile":
         return <ProfileAndPassword />;
-
       default:
         return <p>Invalid Tab</p>;
     }
