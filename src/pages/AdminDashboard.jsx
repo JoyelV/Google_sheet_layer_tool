@@ -113,8 +113,16 @@ const AdminDashboard = () => {
       setVehicleData(vehicles);
 
       const total = res?.data?.pagination?.total || vehicles.length;
-      const backendTotalPages = res?.data?.pagination?.totalPages || Math.ceil(total / filters.limit);
-      console.log("Total vehicles:", total, "Limit:", filters.limit, "Total pages:", backendTotalPages);
+      const backendTotalPages =
+        res?.data?.pagination?.totalPages || Math.ceil(total / filters.limit);
+      console.log(
+        "Total vehicles:",
+        total,
+        "Limit:",
+        filters.limit,
+        "Total pages:",
+        backendTotalPages
+      );
 
       setVehiclePagination({
         currentPage: filters.page,
@@ -197,7 +205,8 @@ const AdminDashboard = () => {
   };
 
   const deleteVehicle = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this vehicle?")) return;
+    if (!window.confirm("Are you sure you want to delete this vehicle?"))
+      return;
     try {
       await axios.delete(`/vehicles/${id}`);
       alert("🗑️ Vehicle deleted successfully!");
@@ -378,6 +387,7 @@ const AdminDashboard = () => {
             fetchUsers={fetchUsers}
             filters={filters}
             setFilters={setFilters}
+            currentUser={currentUser}
           />
         ) : (
           <p style={{ padding: "20px", textAlign: "center" }}>

@@ -6,9 +6,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers["Authorization"] = `Bearer ${token}`;
-  }
+  if (token) config.headers["Authorization"] = `Bearer ${token}`;
   return config;
 });
 
@@ -17,17 +15,29 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // ❌ Skip refresh for login or refresh calls
+    if (
+      originalRequest.url.includes("/auth/refresh") ||
+      originalRequest.url.includes("/auth/login")
+    ) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const { data } = await api.post("/auth/refresh"); 
-        const newAccessToken = data.accessToken || data.data?.accessToken;
+        const { data } = await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/refresh`
+        );
 
-        localStorage.setItem("token", newAccessToken);
+        const newToken = data.accessToken || data.data?.accessToken;
+        if (!newToken) throw new Error("No new token in refresh response");
 
-        localStorage.setItem("user", JSON.stringify(data.data.user));
+        localStorage.setItem("token", newToken);
+        if (data.data?.user)
+          localStorage.setItem("user", JSON.stringify(data.data.user));
 
-        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("token");

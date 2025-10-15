@@ -8,8 +8,8 @@ import "react-toastify/dist/ReactToastify.css";
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
-import Pagination from '@mui/material/Pagination';
-import Stack from '@mui/material/Stack';
+import Pagination from "@mui/material/Pagination";
+import Stack from "@mui/material/Stack";
 
 const UserManagement = ({
   users,
@@ -22,9 +22,15 @@ const UserManagement = ({
   fetchUsers,
   filters,
   setFilters,
+  currentUser,
 }) => {
   const [editingRowId, setEditingRowId] = useState(null);
-  const [editedUser, setEditedUser] = useState({ name: "", email: "", role: "", status: "" });
+  const [editedUser, setEditedUser] = useState({
+    name: "",
+    email: "",
+    role: "",
+    status: "",
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
@@ -80,7 +86,9 @@ const UserManagement = ({
     // Email validation
     if (!user.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(user.email)) {
+    } else if (
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(user.email)
+    ) {
       newErrors.email = "Invalid email format";
     }
 
@@ -105,13 +113,16 @@ const UserManagement = ({
         if (user.password.length < minLength) {
           newErrors.password = "Password must be at least 8 characters long";
         } else if (!hasUpperCase) {
-          newErrors.password = "Password must contain at least one uppercase letter";
+          newErrors.password =
+            "Password must contain at least one uppercase letter";
         } else if (!hasLowerCase) {
-          newErrors.password = "Password must contain at least one lowercase letter";
+          newErrors.password =
+            "Password must contain at least one lowercase letter";
         } else if (!hasNumber) {
           newErrors.password = "Password must contain at least one number";
         } else if (!hasSpecialChar) {
-          newErrors.password = "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
+          newErrors.password =
+            'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)';
         }
       }
     }
@@ -237,7 +248,9 @@ const UserManagement = ({
     setConfirmAction(actionType);
     setConfirmMessage(
       actionType === "block"
-        ? `Are you sure you want to ${user.status === "blocked" ? "unblock" : "block"} this user?`
+        ? `Are you sure you want to ${
+            user.status === "blocked" ? "unblock" : "block"
+          } this user?`
         : "Are you sure you want to delete this user?"
     );
     setConfirmDialogVisible(true);
@@ -259,6 +272,11 @@ const UserManagement = ({
 
   // Block/unblock
   const handleToggleBlock = async (user) => {
+    if (user.email === currentUser?.email) {
+      toast.warning("⚠️ You cannot block your own account!");
+      return;
+    }
+
     try {
       const result = await toggleBlock(user);
       if (result?.success) {
@@ -274,13 +292,15 @@ const UserManagement = ({
 
   // Delete
   const handleDelete = async (user) => {
+    if (user.email === currentUser?.email) {
+      toast.warning("⚠️ You cannot delete your own account!");
+      return;
+    }
+
     try {
       const result = await deleteUser(user.id);
       if (result?.success) {
         toast.success("🗑️ User deleted successfully!");
-        if (searchInput.trim() && user.id === Number(searchInput)) {
-          setSearchedUser(null);
-        }
       } else {
         toast.error("Failed to delete user.");
       }
@@ -322,8 +342,13 @@ const UserManagement = ({
         style={{ width: "350px" }}
         onHide={() => setConfirmDialogVisible(false)}
         footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <button className="btn cancel" onClick={() => setConfirmDialogVisible(false)}>
+          <div
+            style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}
+          >
+            <button
+              className="btn cancel"
+              onClick={() => setConfirmDialogVisible(false)}
+            >
               Cancel
             </button>
             <button className="btn save" onClick={handleConfirmAction}>
@@ -360,10 +385,14 @@ const UserManagement = ({
             <label>Email</label>
             <InputText
               value={newUser.email}
-              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              onChange={(e) =>
+                setNewUser({ ...newUser, email: e.target.value })
+              }
               placeholder="Enter email"
             />
-            {errors.email && <small className="error-text">{errors.email}</small>}
+            {errors.email && (
+              <small className="error-text">{errors.email}</small>
+            )}
           </div>
           <div className="form-group">
             <label>Role</label>
@@ -386,10 +415,14 @@ const UserManagement = ({
             <InputText
               type="password"
               value={newUser.password}
-              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              onChange={(e) =>
+                setNewUser({ ...newUser, password: e.target.value })
+              }
               placeholder="Enter password"
             />
-            {errors.password && <small className="error-text">{errors.password}</small>}
+            {errors.password && (
+              <small className="error-text">{errors.password}</small>
+            )}
           </div>
         </div>
       </Dialog>
@@ -397,7 +430,10 @@ const UserManagement = ({
       {/* User Table */}
       <div className="crud-actions">
         <h1 className="section-title">User Management</h1>
-        <div className="action-buttons" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div
+          className="action-buttons"
+          style={{ display: "flex", gap: "10px", alignItems: "center" }}
+        >
           <InputText
             type="number"
             placeholder="Search by user ID..."
@@ -454,7 +490,9 @@ const UserManagement = ({
                     {editingRowId === u.id ? (
                       <InputText
                         value={editedUser.name}
-                        onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
+                        onChange={(e) =>
+                          setEditedUser({ ...editedUser, name: e.target.value })
+                        }
                       />
                     ) : (
                       u.name
@@ -464,7 +502,12 @@ const UserManagement = ({
                     {editingRowId === u.id ? (
                       <InputText
                         value={editedUser.email}
-                        onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+                        onChange={(e) =>
+                          setEditedUser({
+                            ...editedUser,
+                            email: e.target.value,
+                          })
+                        }
                       />
                     ) : (
                       u.email
@@ -474,7 +517,9 @@ const UserManagement = ({
                     {editingRowId === u.id ? (
                       <select
                         value={editedUser.role}
-                        onChange={(e) => setEditedUser({ ...editedUser, role: e.target.value })}
+                        onChange={(e) =>
+                          setEditedUser({ ...editedUser, role: e.target.value })
+                        }
                       >
                         <option value="admin">Admin</option>
                         <option value="editor">Editor</option>
@@ -489,12 +534,20 @@ const UserManagement = ({
                       <div>
                         <select
                           value={editedUser.status}
-                          onChange={(e) => setEditedUser({ ...editedUser, status: e.target.value })}
+                          onChange={(e) =>
+                            setEditedUser({
+                              ...editedUser,
+                              status: e.target.value,
+                            })
+                          }
+                          disabled={u.email === currentUser?.email} // ✅ disable only for self
                         >
                           <option value="active">Active</option>
                           <option value="blocked">Blocked</option>
                         </select>
-                        {errors.status && <small className="error-text">{errors.status}</small>}
+                        {errors.status && (
+                          <small className="error-text">{errors.status}</small>
+                        )}
                       </div>
                     ) : u.status === "deleted" ? (
                       "Deleted"
@@ -504,25 +557,38 @@ const UserManagement = ({
                       "Active"
                     )}
                   </td>
+
                   <td style={{ display: "flex", gap: "8px" }}>
                     {editingRowId === u.id ? (
                       <>
-                        <button className="icon-btn save" onClick={handleSaveClick}>
+                        <button
+                          className="icon-btn save"
+                          onClick={handleSaveClick}
+                        >
                           <i className="pi pi-check" />
                         </button>
-                        <button className="icon-btn cancel" onClick={handleCancelClick}>
+                        <button
+                          className="icon-btn cancel"
+                          onClick={handleCancelClick}
+                        >
                           <i className="pi pi-times" />
                         </button>
                       </>
                     ) : (
                       <>
-                        <button className="icon-btn edit" onClick={() => handleEditClick(u)}>
+                        <button
+                          className="icon-btn edit"
+                          onClick={() => handleEditClick(u)}
+                        >
                           <i className="pi pi-pencil" />
                         </button>
                         <button
                           className="icon-btn toggle"
                           onClick={() => openConfirmDialog(u, "block")}
-                          disabled={editingRowId === u.id}
+                          disabled={
+                            editingRowId === u.id ||
+                            u.email === currentUser?.email
+                          }
                         >
                           {u.status === "blocked" ? (
                             <i className="pi pi-unlock" />
@@ -530,12 +596,19 @@ const UserManagement = ({
                             <i className="pi pi-lock" />
                           )}
                         </button>
+
                         <button
-                          className={`icon-btn delete ${u.status === "deleted" ? "disabled" : ""}`}
+                          className={`icon-btn delete ${
+                            u.status === "deleted" ? "disabled" : ""
+                          }`}
                           onClick={() => {
-                            if (u.status !== "deleted") openConfirmDialog(u, "delete");
+                            if (u.status !== "deleted")
+                              openConfirmDialog(u, "delete");
                           }}
-                          disabled={u.status === "deleted"}
+                          disabled={
+                            u.status === "deleted" ||
+                            u.email === currentUser?.email
+                          }
                         >
                           <i className="pi pi-trash" />
                         </button>
