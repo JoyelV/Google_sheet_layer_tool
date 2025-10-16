@@ -2,7 +2,11 @@ import { useRef, useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
-import { toast } from "react-toastify";
+import { AutoComplete } from "primereact/autocomplete";
+import { ToastContainer, toast } from "react-toastify";
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+
+import './VehicleManagement.css'
 
 const debounce = (func, wait) => {
   let timeout;
@@ -67,16 +71,13 @@ const VehicleManagement = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
-  const [yearOptions, setYearOptions] = useState([]);
-  const [makeOptions, setMakeOptions] = useState([]);
-  const [locationOptions, setLocationOptions] = useState([]);
-  const [modelOptions, setModelOptions] = useState([]);
-
+  const [yearSuggestions, setYearSuggestions] = useState([]);
+  const [makeSuggestions, setMakeSuggestions] = useState([]);
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [modelSuggestions, setModelSuggestions] = useState([]);
   const isViewer = currentUser?.role === "viewer";
 
   useEffect(() => {
-    console.log("vehicleFilters:", vehicleFilters); // Debug log
-    console.log("vehiclePagination:", vehiclePagination); // Debug log
     if (fullVehicleData && fullVehicleData.length > 0) {
       const uniqueYears = [
         ...new Set(fullVehicleData.map((v) => v.vehicleYear).filter(Boolean)),
@@ -92,10 +93,10 @@ const VehicleManagement = ({
       const uniqueModels = [
         ...new Set(fullVehicleData.map((v) => v.modelNumber).filter(Boolean)),
       ].sort();
-      setYearOptions(uniqueYears);
-      setMakeOptions(uniqueMakes);
-      setLocationOptions(uniqueLocations);
-      setModelOptions(uniqueModels);
+      setYearSuggestions(uniqueYears);
+      setMakeSuggestions(uniqueMakes);
+      setLocationSuggestions(uniqueLocations);
+      setModelSuggestions(uniqueModels);
     }
   }, [fullVehicleData]);
 
@@ -131,13 +132,11 @@ const VehicleManagement = ({
     } else if (!isValidDate(data.auctionDate)) {
       errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
     }
-
     if (!data.vehicleYear) {
       errors.vehicleYear = "Vehicle year is required";
     } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
       errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
     }
-
     [
       "make",
       "series",
@@ -149,7 +148,6 @@ const VehicleManagement = ({
     ].forEach((field) => {
       if (!isNonEmptyText(data[field])) errors[field] = `${field} is required`;
     });
-
     [
       "odometer",
       "auctionSalePrice",
@@ -165,7 +163,6 @@ const VehicleManagement = ({
       else if (!isPositiveNumber(data[field]))
         errors[field] = `${field} must be a valid number ≥ 0`;
     });
-
     return errors;
   };
 
@@ -186,29 +183,49 @@ const VehicleManagement = ({
   });
 
   const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setIsUploading(true);
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const validTypes = ["text/csv", "application/vnd.ms-excel"];
+  const validExtension = file.name.toLowerCase().endsWith(".csv");
+  if (!validTypes.includes(file.type) || !validExtension) {
+    toast.error("Please upload a valid CSV file.");
+    e.target.value = null;
+    return;
+  }
+
+  setIsUploading(true);
+  setUploadProgress(0);
+  const formData = new FormData();
+  formData.append("csvFile", file);
+
+  try {
+    await bulkInsertVehicles(formData, (progressEvent) => {
+      const percentCompleted = Math.round(
+        (progressEvent.loaded * 100) / progressEvent.total
+      );
+      setUploadProgress(percentCompleted);
+    });
+    toast.success("CSV uploaded successfully!");
+  } catch (err) {
+    console.error("Upload failed:", err);
+
+    // Check if API sent a response message
+    const apiMessage =
+      err.response?.data?.message || err.response?.data || err.message || "CSV upload failed";
+
+    toast.error(apiMessage, {
+      position: "top-right",
+      autoClose: 8000,
+      theme: "colored",
+    });
+  } finally {
+    setIsUploading(false);
     setUploadProgress(0);
-    const formData = new FormData();
-    formData.append("csvFile", file);
-    try {
-      await bulkInsertVehicles(formData, (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
-        setUploadProgress(percentCompleted);
-      });
-      alert("✅ CSV uploaded successfully!");
-    } catch (err) {
-      console.error("Upload failed:", err);
-      alert("❌ CSV upload failed. Check console for details.");
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      e.target.value = null;
-    }
-  };
+    e.target.value = null;
+  }
+};
+
 
   const handleAddSubmit = async () => {
     const errors = validateForm(form);
@@ -216,7 +233,7 @@ const VehicleManagement = ({
     if (Object.keys(errors).length > 0) return;
     try {
       await addVehicle(form);
-      toast.success("✅ Vehicle added successfully!");
+      toast.success("Vehicle added successfully!");
       setShowAddModal(false);
       setForm({
         auctionDate: "",
@@ -236,7 +253,7 @@ const VehicleManagement = ({
       setFormErrors({});
     } catch (err) {
       console.error("Error submitting form:", err);
-      toast.error("❌ Failed to add vehicle.");
+      toast.error("Failed to add vehicle.");
     }
   };
 
@@ -260,11 +277,17 @@ const VehicleManagement = ({
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
     try {
-      await editVehicle(editData);
-      setShowEditModal(false);
-      setFormErrors({});
+      const result = await editVehicle(editData);
+      if (result.success) {
+        toast.success("Vehicle updated successfully!");
+        setShowEditModal(false);
+        setFormErrors({});
+      } else {
+        toast.error(result.message || "Failed to update vehicle.");
+      }
     } catch (err) {
       console.error("Error submitting edit form:", err);
+      toast.error("Failed to update vehicle.");
     }
   };
 
@@ -274,9 +297,38 @@ const VehicleManagement = ({
     setShowListModal(true);
   };
 
-  const handleDeleteBatch = () => {
-    if (deleteBatchId.trim()) deleteBulkInsertion(deleteBatchId);
-    setShowDeleteModal(false);
+  const handleDeleteBatch = async () => {
+    if (!deleteBatchId.trim()) {
+      toast.error("Please enter a valid Batch ID.");
+      return;
+    }
+    try {
+      await deleteBulkInsertion(deleteBatchId);
+      const updatedList = await listBulkInsertions();
+      setBulkList(updatedList || []);
+      setDeleteBatchId("");
+      setShowDeleteModal(false);
+      if (updatedList.length === 0) {
+        setShowListModal(false);
+      }
+    } catch (err) {
+      console.error("Error in handleDeleteBatch:", err);
+      toast.error("Failed to delete bulk insertion.");
+    }
+  };
+
+  const handleDeleteBatchFromList = async (batchId) => {
+    try {
+      await deleteBulkInsertion(batchId);
+      const updatedList = await listBulkInsertions();
+      setBulkList(updatedList || []);
+      if (updatedList.length === 0) {
+        setShowListModal(false);
+      }
+    } catch (err) {
+      console.error("Error in handleDeleteBatchFromList:", err);
+      toast.error("Failed to delete bulk insertion.");
+    }
   };
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
@@ -289,16 +341,28 @@ const VehicleManagement = ({
   };
 
   const handleRevert = async (previousData) => {
-    if (!window.confirm("Are you sure you want to revert to this version?"))
-      return;
+    confirmDialog({
+  message: "Are you sure you want to revert to this previous version?",
+  header: "Confirm Revert",
+  icon: "pi pi-undo",
+  acceptLabel: "Yes, Revert",
+  rejectLabel: "Cancel",
+  accept: async () => {
     try {
-      await editVehicle({ id: selectedVehicleId, ...previousData });
-      alert("✅ Vehicle reverted successfully!");
-      setShowHistoryModal(false);
+      const result = await editVehicle({ id: selectedVehicleId, ...previousData });
+      if (result.success) {
+        toast.success("Vehicle reverted successfully!");
+        setShowHistoryModal(false);
+      } else {
+        toast.error(result.message || "Failed to revert vehicle.");
+      }
     } catch (err) {
       console.error("Failed to revert:", err);
-      alert("❌ Failed to revert vehicle.");
+      toast.error("Failed to revert vehicle.");
     }
+  },
+});
+
   };
 
   const debouncedFetchVehicles = useRef(
@@ -313,8 +377,54 @@ const VehicleManagement = ({
     }
   }, [vehicleFilters, debouncedFetchVehicles]);
 
+  // Autocomplete suggestion handlers
+  const searchYears = (event) => {
+    const query = event.query.toLowerCase();
+    const filtered = yearSuggestions.filter((year) =>
+      year.toString().toLowerCase().includes(query)
+    );
+    setYearSuggestions(filtered);
+  };
+
+  const searchMakes = (event) => {
+    const query = event.query.toLowerCase();
+    const filtered = makeSuggestions.filter((make) =>
+      make.toLowerCase().includes(query)
+    );
+    setMakeSuggestions(filtered);
+  };
+
+  const searchLocations = (event) => {
+    const query = event.query.toLowerCase();
+    const filtered = locationSuggestions.filter((loc) =>
+      loc.toLowerCase().includes(query)
+    );
+    setLocationSuggestions(filtered);
+  };
+
+  const searchModels = (event) => {
+    const query = event.query.toLowerCase();
+    const filtered = modelSuggestions.filter((model) =>
+      model.toLowerCase().includes(query)
+    );
+    setModelSuggestions(filtered);
+  };
+
   return (
     <section className="content-section">
+
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
       {!isViewer && (
         <div className="crud-actions">
           <h1 className="section-title">Vehicle Management</h1>
@@ -386,78 +496,70 @@ const VehicleManagement = ({
               flexWrap: "wrap",
             }}
           >
-            <select
+            <AutoComplete
               value={vehicleFilters.year || ""}
+              suggestions={yearSuggestions}
+              completeMethod={searchYears}
               onChange={(e) =>
                 setVehicleFilters({
                   ...vehicleFilters,
-                  year: e.target.value,
+                  year: e.value,
                   page: 1,
                 })
               }
-              style={{ width: "120px" }}
-            >
-              <option value="">All Years</option>
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-            <select
+              placeholder="Search Years"
+              style={{ width: "180px" }}
+              inputStyle={{ width: "100%" }}
+              dropdown
+            />
+            <AutoComplete
               value={vehicleFilters.make || ""}
+              suggestions={makeSuggestions}
+              completeMethod={searchMakes}
               onChange={(e) =>
                 setVehicleFilters({
                   ...vehicleFilters,
-                  make: e.target.value,
+                  make: e.value,
                   page: 1,
                 })
               }
-              style={{ width: "150px" }}
-            >
-              <option value="">All Makes</option>
-              {makeOptions.map((make) => (
-                <option key={make} value={make}>
-                  {make}
-                </option>
-              ))}
-            </select>
-            <select
+              placeholder="Search Makes"
+              style={{ width: "180px" }}
+              inputStyle={{ width: "100%" }}
+              dropdown
+            />
+            <AutoComplete
               value={vehicleFilters.location || ""}
+              suggestions={locationSuggestions}
+              completeMethod={searchLocations}
               onChange={(e) =>
                 setVehicleFilters({
                   ...vehicleFilters,
-                  location: e.target.value,
+                  location: e.value,
                   page: 1,
                 })
               }
-              style={{ width: "150px" }}
-            >
-              <option value="">All Locations</option>
-              {locationOptions.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-            <select
+              placeholder="Search Locations"
+              style={{ width: "180px" }}
+              inputStyle={{ width: "100%" }}
+              dropdown
+            />
+            <AutoComplete
               value={vehicleFilters.modelNumber || ""}
+              suggestions={modelSuggestions}
+              completeMethod={searchModels}
               onChange={(e) =>
                 setVehicleFilters({
                   ...vehicleFilters,
-                  modelNumber: e.target.value,
+                  modelNumber: e.value,
                   page: 1,
                 })
               }
-              style={{ width: "150px" }}
-            >
-              <option value="">All Models</option>
-              {modelOptions.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
+              placeholder="Search Models"
+              style={{ width: "180px" }}
+              inputStyle={{ width: "100%" }}
+              dropdown
+            />
             <select
               value={vehicleFilters.sortBy || "modelNumber"}
               onChange={(e) =>
@@ -511,8 +613,34 @@ const VehicleManagement = ({
           <tbody>
             {vehicleLoading ? (
               <tr>
-                <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
-                  Loading vehicles...
+                <td colSpan={isViewer ? 13 : 14}>
+                  <div className="loading-container">
+                    <div className="spinner"></div>
+                    <p>Loading vehicle data...</p>
+                    {[...Array(5)].map((_, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          width: "100%",
+                          margin: "8px 0",
+                        }}
+                      >
+                        {[...Array(isViewer ? 13 : 14)].map((_, cellIndex) => (
+                          <div
+                            key={cellIndex}
+                            className="skeleton-loader"
+                            style={{
+                              height: "30px",
+                              width: "100%",
+                              maxWidth: "100px",
+                            }}
+                          ></div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </td>
               </tr>
             ) : vehicleData?.length > 0 ? (
@@ -544,7 +672,18 @@ const VehicleManagement = ({
                       </button>
                       <button
                         className="icon-btn delete"
-                        onClick={() => deleteVehicle(v.id)}
+                        onClick={() => {
+                          confirmDialog({
+  message: "Are you sure you want to delete this vehicle?",
+  header: "Confirm Deletion",
+  icon: "pi pi-exclamation-triangle",
+  acceptClassName: "p-button-danger",
+  acceptLabel: "Yes, Delete",
+  rejectLabel: "Cancel",
+  accept: () => deleteVehicle(v.id),
+});
+
+                        }}
                       >
                         🗑️
                       </button>
@@ -792,7 +931,7 @@ const VehicleManagement = ({
                             icon="pi pi-trash"
                             severity="danger"
                             text
-                            onClick={() => deleteBulkInsertion(batch.batchId)}
+                            onClick={() => handleDeleteBatchFromList(batch.batchId)}
                           />
                         </td>
                       </tr>
@@ -811,16 +950,26 @@ const VehicleManagement = ({
             visible={showDeleteModal}
             style={{ width: "30vw" }}
             onHide={() => setShowDeleteModal(false)}
+            footer={
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <Button
+                  label="Cancel"
+                  className="btn cancel"
+                  onClick={() => setShowDeleteModal(false)}
+                />
+                <Button
+                  label="Delete"
+                  className="btn save"
+                  onClick={handleDeleteBatch}
+                />
+              </div>
+            }
           >
             <label>Enter Batch ID:</label>
             <InputText
               value={deleteBatchId}
               onChange={(e) => setDeleteBatchId(e.target.value)}
-            />
-            <Button
-              label="Delete"
-              className="btn save"
-              onClick={handleDeleteBatch}
+              placeholder="Enter Batch ID"
             />
           </Dialog>
           <Dialog

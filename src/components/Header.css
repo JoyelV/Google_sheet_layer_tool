@@ -77,11 +77,7 @@
     justify-content: flex-end;
   }
   .btn.logout {
-    padding: 6px 12px;
-    font-size: 0.85rem; 
-  }
-  .btn.logout {
-    width: 100px;
+    width: 80px;
     padding: 6px 12px;
   }
 }
@@ -97,6 +93,7 @@
   .btn.logout {
     padding: 5px 10px;
     font-size: 0.8rem;
+    width: 60px;
   }
 }
 
@@ -109,9 +106,9 @@
     line-height: 1.1;
   }
   .btn.logout {
-    padding: 3px 6px;
     font-size: 0.7rem;
     gap: 5px;
+    width: 60px;
   }
 }
 
@@ -124,8 +121,8 @@
     line-height: 1.1;
   }
   .btn.logout {
-    padding: 3px 5px;
     font-size: 0.65rem;
     gap: 4px;
+    width: 60px;
   }
 }

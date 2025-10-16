@@ -199,6 +199,85 @@ button:disabled::after {
   100% { transform: rotate(360deg); }
 }
 
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 8px;
+  align-self: flex-end;
+}
+
+.login-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.modal-content h3 {
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  margin: 0 5px;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.modal-buttons .cancel-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.modal-buttons button:not(.cancel-btn) {
+  background: #2563eb;
+  color: white;
+}
+
+
 /* === Responsive Design === */
 @media (max-width: var(--breakpoint-mobile)) {
   .login-card {

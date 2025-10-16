@@ -1,0 +1,494 @@
+/* User Management Section */
+.content-section {
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.section-title {
+  white-space: nowrap;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+}
+
+.section-subtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+/* CRUD Actions */
+.crud-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 5px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.crud-actions .p-inputtext {
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.crud-actions .p-dropdown {
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  font-size: 14px;
+}
+
+.crud-actions .p-dropdown:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.action-button {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Button Styles (Consistent for Desktop and Laptop) */
+.crud-actions .btn {
+  padding: 10px;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn.add-row {
+  background-color: #2563EB;
+  color: white;
+}
+
+.btn.add-row:hover {
+  background-color: #15803D;
+}
+
+.icon-btn {
+  padding: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
+.icon-btn.save {
+  color: #4caf50;
+}
+
+.icon-btn.cancel {
+  color: #f44336;
+}
+
+.icon-btn.edit {
+  color: #2563EB;
+}
+
+.icon-btn.toggle, .icon-btn.delete {
+  color: #6b7280;
+}
+
+.icon-btn.delete.disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Table */
+.table-container {
+  background: white;
+  border-radius: 8px;
+  overflow-x: auto;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+thead {
+  background: #f1f5f9;
+  color: #1f2937;
+}
+
+th, td {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Dialog and Form */
+.add-user-form .form-group {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+}
+
+.add-user-form label {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.add-user-form .p-inputtext {
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.error-text {
+  color: #f44336;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.p-dialog-header {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #333;
+  padding: 10px;
+}
+
+.p-dialog-content {
+  padding: 10px;
+}
+
+.btn.save {
+  background-color: #4caf50;
+  color: #fff;
+  padding: 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 10px;
+  width: 50%;
+}
+
+.btn.cancel {
+  background-color: #f44336;
+  color: #fff;
+  padding: 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 10px;
+  width: 50%;
+}
+
+.custom-confirm-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 360px;
+  width: 90%;
+  margin: 0 auto;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.custom-confirm-modal button {
+  margin: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.custom-confirm-modal button:first-of-type {
+  background-color: #2563eb;
+  color: white;
+}
+
+.custom-confirm-modal button:first-of-type:hover {
+  background-color: #15803D;
+}
+
+.custom-confirm-modal button:last-of-type {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.custom-confirm-modal button:last-of-type:hover {
+  background-color: #d1d5db;
+}
+
+.react-confirm-alert-overlay {
+  background: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: none !important;
+}
+
+/* Loading Animation */
+.skeleton-loader {
+  animation: pulse 1.5s infinite;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  height: 30px;
+  width: 100%;
+}
+
+.table-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #2563eb;
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 1rem auto;
+  display: block;
+}
+
+@keyframes pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Pagination */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: #e5e7eb;
+  color: #111827;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #d1d5db;
+}
+
+.pagination-btn.active {
+  background-color: #2563eb;
+  color: white;
+}
+
+.pagination-btn:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.ellipsis {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #111827;
+}
+
+@media (max-width: 1200px) {
+  .section-title {
+    font-size: 1.1rem !important;
+  }
+   .action-button {
+    gap: 5px;
+   }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .section-title {
+    font-size: 1.2rem !important;
+  }
+  .crud-actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 8px;
+    align-items: center;
+  }
+  .action-button {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px;
+    width: 100%;
+  }
+  .crud-actions .p-inputtext,
+  .crud-actions .p-dropdown,
+  .crud-actions .btn {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  th, td {
+    font-size: 0.85rem;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 1000px) {
+  .section-title {
+    font-size: 1.1rem !important;
+  }
+  .action-button {
+    grid-template-columns: repeat(3, 200px) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 1rem !important;
+  }
+  .content-section {
+    padding: 0.5rem;
+  }
+  .section-title {
+    font-size: 1.2rem;
+  }
+  .section-subtitle {
+    font-size: 0.8rem;
+  }
+  .crud-actions {
+    grid-template-columns: 1fr;
+  }
+  .action-button {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .crud-actions .btn {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  .icon-btn {
+    padding: 6px;
+  }
+  .icon-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  .btn.save, .btn.cancel {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    width: 100%;
+  }
+  table {
+    font-size: 0.8rem;
+  }
+  th, td {
+    padding: 0.4rem;
+  }
+  .custom-confirm-modal {
+    width: 95%;
+    max-width: 320px;
+    padding: 15px;
+  }
+  .add-user-form .p-inputtext {
+    font-size: 0.9rem;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .action-button {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .crud-actions .btn {
+    font-size: 0.8rem;
+    padding: 10px !important;
+    width: 85% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-title {
+    font-size: 1.1rem !important;
+  }
+  .section-subtitle {
+    font-size: 0.75rem;
+  }
+  .crud-actions {
+    gap: 6px;
+  }
+  .crud-actions .btn {
+    font-size: 0.8rem;
+    padding: 10px !important;
+    width: 85% !important;
+  }
+  .action-button {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .btn.save, .btn.cancel {
+    font-size: 0.85rem;
+    padding: 0.4rem;
+  }
+  .table-container {
+    overflow-x: auto;
+  }
+  table {
+    font-size: 0.7rem;
+  }
+  th, td {
+    padding: 0.4rem;
+  }
+  .custom-confirm-modal {
+    max-width: 280px;
+  }
+  .add-user-form .p-inputtext {
+    font-size: 0.85rem;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  .crud-actions .btn {
+    font-size: 0.7rem;
+    padding: 8px !important;
+    width: 35% !important;
+  }
+  .action-button {
+    grid-template-columns: 1fr !important;
+  }
+  
+}

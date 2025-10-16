@@ -5,8 +5,11 @@ import UserManagement from "../components/UserManagement";
 import VehicleManagement from "../components/VehicleManagement";
 import axios from "../api/axiosInstance";
 import ProfileAndPassword from "../components/ProfileAndPassword";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import secureLocalStorage from "react-secure-storage";
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
@@ -23,15 +26,15 @@ const AdminDashboard = () => {
     limit: 10,
   });
 
-const [filters, setFilters] = useState({
-  page: 1,
-  limit: 10,
-  role: "",
-  status: "",
-  search: "",
-  sortBy: "", 
-  sortOrder: "asc", 
-});
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 10,
+    role: "",
+    status: "",
+    search: "",
+    sortBy: "",
+    sortOrder: "asc",
+  });
 
   const [vehicleFilters, setVehicleFilters] = useState({
     page: 1,
@@ -51,53 +54,54 @@ const [filters, setFilters] = useState({
     limit: 10,
   });
 
-const storedUser = secureLocalStorage.getItem("user");
-const currentUser = storedUser && typeof storedUser === "object" ? storedUser : null;
+  const storedUser = secureLocalStorage.getItem("user");
+  const currentUser = storedUser && typeof storedUser === "object" ? storedUser : null;
 
   const fetchUsers = async ({
-  page = 1,
-  limit = 10,
-  role = "",
-  status = "",
-  search = "",
-  sortBy = "",
-  sortOrder = "asc",
-}) => {
-  setLoading(true);
-  try {
-    const res = await axios.get(
-      `/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
-        search
-      )}&sortBy=${sortBy}&sortOrder=${sortOrder}`
-    );
-    if (res.data.success) {
-      setUsers(res.data.data.users || []);
-      setPagination(
-        res.data.data.pagination || {
+    page = 1,
+    limit = 10,
+    role = "",
+    status = "",
+    search = "",
+    sortBy = "",
+    sortOrder = "asc",
+  }) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(
+        `/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
+          search
+        )}&sortBy=${sortBy}&sortOrder=${sortOrder}`
+      );
+      if (res.data.success) {
+        setUsers(res.data.data.users || []);
+        setPagination(
+          res.data.data.pagination || {
+            currentPage: page,
+            totalPages: 1,
+            totalUsers: 0,
+            limit,
+          }
+        );
+      } else {
+        setUsers([]);
+        setPagination({
           currentPage: page,
           totalPages: 1,
           totalUsers: 0,
           limit,
-        }
-      );
-    } else {
-      setUsers([]);
-      setPagination({
-        currentPage: page,
-        totalPages: 1,
-        totalUsers: 0,
-        limit,
       });
-      console.error("Failed to fetch users:", res.data.message);
+        console.error("Failed to fetch users:", res.data.message);
+      }
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setUsers([]);
+      setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Error fetching users:", err);
-    setUsers([]);
-    setPagination({ currentPage: page, totalPages: 1, totalUsers: 0, limit });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   const fetchVehicles = async (filters = vehicleFilters) => {
     setVehicleLoading(true);
     try {
@@ -178,48 +182,42 @@ const currentUser = storedUser && typeof storedUser === "object" ? storedUser : 
     try {
       const res = await axios.post("/vehicles/insert", formData);
       if (res.data?.success) {
-        alert("✅ Vehicle added successfully!");
         fetchVehicles();
       } else {
-        alert(res.data?.message || "❌ Failed to add vehicle.");
+        toast.error(res.data?.message || "Failed to add vehicle.");
       }
     } catch (err) {
       console.error("Error adding vehicle:", err.response?.data || err.message);
-      alert("❌ Failed to add vehicle.");
+      toast.error("Failed to add vehicle.");
     }
   };
 
   const editVehicle = async (updatedVehicle) => {
-    try {
-      const { id, ...data } = updatedVehicle;
-      const res = await axios.put(`/vehicles/${id}`, data);
-      if (res.data?.success) {
-        alert("✅ Vehicle updated successfully!");
-        fetchVehicles();
-      } else {
-        alert(res.data?.message || "❌ Failed to update vehicle.");
-      }
-    } catch (err) {
-      console.error(
-        "Error updating vehicle:",
-        err.response?.data || err.message
-      );
-      alert("❌ Failed to update vehicle.");
-    }
-  };
-
-  const deleteVehicle = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this vehicle?"))
-      return;
-    try {
-      await axios.delete(`/vehicles/${id}`);
-      alert("🗑️ Vehicle deleted successfully!");
+  try {
+    const { id, ...data } = updatedVehicle;
+    const res = await axios.put(`/vehicles/${id}`, data);
+    if (res.data?.success) {
       fetchVehicles();
-    } catch (err) {
-      console.error("Error deleting vehicle:", err);
-      alert("❌ Failed to delete vehicle.");
+      return { success: true };
+    } else {
+      return { success: false, message: res.data?.message || "Failed to update vehicle." };
     }
-  };
+  } catch (err) {
+    console.error("Error updating vehicle:", err.response?.data || err.message);
+    return { success: false, message: "Failed to update vehicle." };
+  }
+};
+
+const deleteVehicle = async (id) => {
+  try {
+    await axios.delete(`/vehicles/${id}`);
+    toast.success("Vehicle deleted successfully!");
+    fetchVehicles();
+  } catch (err) {
+    console.error("Error deleting vehicle:", err);
+    toast.error("Failed to delete vehicle.");
+  }
+};
 
   const bulkInsertVehicles = async (formData, onProgress) => {
     try {
@@ -253,16 +251,25 @@ const currentUser = storedUser && typeof storedUser === "object" ? storedUser : 
   };
 
   const deleteBulkInsertion = async (batchId) => {
-    if (!window.confirm("Are you sure you want to delete this bulk insertion?"))
-      return;
+    confirmDialog({
+  message: "Are you sure you want to delete this bulk insertion?",
+  header: "Delete Confirmation",
+  icon: "pi pi-exclamation-triangle",
+  acceptClassName: "p-button-danger",
+  acceptLabel: "Yes, Delete",
+  rejectLabel: "Cancel",
+  accept: async () => {
     try {
       await axios.delete(`/vehicles/batch/${batchId}`);
-      alert("🗑️ Bulk insertion deleted successfully!");
+      toast.success("Bulk insertion deleted successfully!");
       fetchVehicles();
     } catch (err) {
       console.error("Error deleting bulk insertion:", err);
-      alert("❌ Failed to delete bulk insertion");
+      toast.error("Failed to delete bulk insertion.");
     }
+  },
+});
+
   };
 
   const getRowHistory = async (id) => {
@@ -302,27 +309,28 @@ const currentUser = storedUser && typeof storedUser === "object" ? storedUser : 
     }
   };
 
-  const editUser = async (user) => {
-    const { id, name, email, role } = user;
-    if (!name || !email || !role) {
-      return { success: false, message: "Missing fields" };
+const editUser = async (user) => {
+  const { id, name, email, role } = user;
+  if (!name || !email || !role) {
+    toast.error("Missing fields");
+    return { success: false, message: "Missing fields" };
+  }
+  try {
+    const res = await axios.put(`/users/${id}`, { name, email, role });
+    if (res.data.success) {
+      await fetchUsers(filters);
+      //toast.success("User updated successfully!");
+      return { success: true, message: "User updated successfully" };
+    } else {
+      toast.error(res.data.message || "Failed to update user");
+      return { success: false, message: res.data.message || "Failed to update user" };
     }
-    try {
-      const res = await axios.put(`/users/${id}`, { name, email, role });
-      if (res.data.success) {
-        await fetchUsers(filters);
-        return { success: true, message: "User updated successfully" };
-      } else {
-        return {
-          success: false,
-          message: res.data.message || "Failed to update user",
-        };
-      }
-    } catch (err) {
-      console.error("Error updating user:", err);
-      return { success: false, message: "Server error. Try again later." };
-    }
-  };
+  } catch (err) {
+    console.error("Error updating user:", err);
+    toast.error("Server error. Try again later.");
+    return { success: false, message: "Server error. Try again later." };
+  }
+};
 
   const toggleBlock = async (user) => {
     try {
@@ -376,7 +384,7 @@ const currentUser = storedUser && typeof storedUser === "object" ? storedUser : 
             setVehicleFilters={setVehicleFilters}
             vehiclePagination={vehiclePagination}
             vehicleLoading={vehicleLoading}
-            currentUser={currentUser} 
+            currentUser={currentUser}
           />
         );
       case "users":
@@ -408,6 +416,8 @@ const currentUser = storedUser && typeof storedUser === "object" ? storedUser : 
 
   return (
     <div className="dashboard-container">
+      <ConfirmDialog />
+
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}

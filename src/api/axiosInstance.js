@@ -6,7 +6,6 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // Retrieve token securely
   const token = secureLocalStorage.getItem("token");
   if (token) config.headers["Authorization"] = `Bearer ${token}`;
   return config;
@@ -17,7 +16,6 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Skip refresh for login or refresh calls
     if (
       originalRequest.url.includes("/auth/refresh") ||
       originalRequest.url.includes("/auth/login")
