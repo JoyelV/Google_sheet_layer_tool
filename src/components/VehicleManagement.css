@@ -216,13 +216,13 @@ tbody tr:hover {
 
 .p-dialog-header {
   font-weight: 700;
-  font-size: clamp(1rem, 3vw, 1.1rem);
+  font-size: clamp(1.2rem, 3vw, 1.4rem);
   color: #333;
   padding: clamp(6px, 1.5vw, 8px);
 }
 
 .p-dialog-content {
-  padding: clamp(6px, 1.5vw, 8px);
+  padding: clamp(8px, 1.5vw, 10px);
 }
 
 .btn.save, .btn.cancel {
@@ -421,7 +421,7 @@ tbody tr:hover {
 .p-confirm-dialog {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 10px;
   max-width: 360px;
   width: 95%;
   margin: 0 auto;
@@ -480,6 +480,7 @@ tbody tr:hover {
   background: rgba(0, 0, 0, 0.1) !important;
   backdrop-filter: none !important;
 }
+
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
