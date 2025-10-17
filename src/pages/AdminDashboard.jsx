@@ -416,8 +416,6 @@ const editUser = async (user) => {
 
   return (
     <div className="dashboard-container">
-      <ConfirmDialog />
-
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}

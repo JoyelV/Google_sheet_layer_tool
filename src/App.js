@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import secureLocalStorage from "react-secure-storage";
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import { ConfirmDialog } from "primereact/confirmdialog";
 
 const ProtectedRoute = () => {
   const token = secureLocalStorage.getItem('token');
@@ -19,6 +20,8 @@ const PublicRoute = () => {
 
 function App() {
   return (
+    <>
+    <ConfirmDialog />
     <BrowserRouter>
       <Routes>
         <Route element={<PublicRoute />}>
@@ -30,6 +33,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </>
   );
 }
 
