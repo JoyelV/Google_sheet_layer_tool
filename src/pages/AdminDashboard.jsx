@@ -5,11 +5,10 @@ import UserManagement from "../components/UserManagement";
 import VehicleManagement from "../components/VehicleManagement";
 import axios from "../api/axiosInstance";
 import ProfileAndPassword from "../components/ProfileAndPassword";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import secureLocalStorage from "react-secure-storage";
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
-
+import { confirmDialog } from 'primereact/confirmdialog';
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
@@ -425,6 +424,19 @@ const editUser = async (user) => {
         <Header />
         {renderContent()}
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+        closeButton={true} 
+      />
     </div>
   );
 };

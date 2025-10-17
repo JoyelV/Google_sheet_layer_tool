@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "../../src/api/axiosInstance"; 
 import secureLocalStorage from "react-secure-storage";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import './Header.css';
 
 const Header = () => {
@@ -28,12 +29,16 @@ const Header = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
+            toast.success("You have been logged out successfully!");
+
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
       secureLocalStorage.removeItem("token");
       secureLocalStorage.removeItem("user");
-      navigate("/login");
+       setTimeout(() => {
+        navigate("/login");
+      }, 1000); 
     }
   };
 

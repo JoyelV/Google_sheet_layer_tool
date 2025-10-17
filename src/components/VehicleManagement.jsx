@@ -416,18 +416,6 @@ const VehicleManagement = ({
 
   return (
     <section className="content-section">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
       {!isViewer && (
         <div className="crud-actions">
           <h1 className="section-title">Vehicle Management</h1>

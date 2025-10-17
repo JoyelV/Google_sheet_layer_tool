@@ -296,7 +296,6 @@ const UserManagement = ({
           }
         `}
       </style>
-      <ToastContainer position="top-right" autoClose={2500} theme="colored" />
       <Dialog
         header="Confirm Action"
         visible={confirmDialogVisible}
