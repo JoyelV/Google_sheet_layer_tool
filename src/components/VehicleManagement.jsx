@@ -439,7 +439,10 @@ const VehicleManagement = ({
               className="btn add-row"
               onClick={() => setShowAddModal(true)}
             >
-              ➕ Add Vehicle
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24">
+  <path d="M12 5v14m7-7H5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+ Add Vehicle
             </button>
             <button
               className="btn upload-csv"

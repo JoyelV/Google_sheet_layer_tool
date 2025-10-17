@@ -122,6 +122,55 @@
   background-color: #1e293b;
 }
 
+/* Style for react-toastify toast container */
+.Toastify__toast {
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 50px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-family: "Inter", sans-serif; /* Match dashboard font */
+}
+
+/* Style for the close button (x icon) */
+.Toastify__close-button {
+  position: absolute;
+  top: 8px; /* Distance from top edge */
+  right: 8px; /* Distance from right edge */
+  padding: 4px;
+  color: #fff; /* White for visibility */
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+  font-size: 1rem; /* Size of the x icon */
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1;
+}
+
+/* Style for specific toast types */
+.Toastify__toast--success {
+  background-color: #22c55e; /* Green for success */
+}
+
+.Toastify__toast--error {
+  background-color: #f44336; /* Red for error */
+}
+
+.Toastify__toast--warning {
+  background-color: #f59e0b; /* Yellow for warning */
+}
+
+/* Ensure toast content doesn't overlap with the close button */
+.Toastify__toast-body {
+  padding-right: 28px; /* Prevent content overlap */
+  font-size: 0.9rem; /* Consistent with dashboard text */
+  color: #fff; /* White text for readability */
+}
+
 /* Responsive Sidebar for Tablets */
 @media (max-width: 1024px) {
   .sidebar {

@@ -57,7 +57,7 @@
   min-width: 80px;
 }
 
-.btn.add-row, .btn.upload, .btn.list-batches {
+.btn.add-row, .btn.upload-csv, .btn.list-batches {
   background-color: #2563EB;
   color: white;
 }
@@ -146,8 +146,9 @@ tbody tr:hover {
 
 .filter-bar .p-autocomplete .p-autocomplete-dropdown {
   border-left: 1px solid #ccc;
-  background-color: #f9f9f9;
+  background-color: #f4f3f3;
   padding: clamp(6px, 1.5vw, 8px);
+  color:#6b7280;
 }
 
 .filter-bar .p-autocomplete-panel {
