@@ -3,6 +3,7 @@ import axios from "../../src/api/axiosInstance";
 import secureLocalStorage from "react-secure-storage";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';  
 import './Header.css';
 
 const Header = () => {
@@ -24,18 +25,19 @@ const Header = () => {
     try {
       if (token) {
         await axios.post(
-          "https://sheetapi.campingx.net/api/auth/logout",
+          "/api/auth/logout",
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
-       toast.success("You have successfully logged out"); 
+      toast.success("You have successfully logged out"); 
     } catch (error) {
       console.error("Logout failed:", error);
+      toast.error("Logout failed!"); 
     } finally {
       secureLocalStorage.removeItem("token");
       secureLocalStorage.removeItem("user");
-      navigate("/login");
+      setTimeout(() => navigate("/login"), 500);
     }
   };
 
@@ -49,6 +51,8 @@ const Header = () => {
           Logout
         </button>
       </div>
+
+      {/* Toast container to display messages */}
       <ToastContainer
         position="top-right"
         autoClose={2000}
