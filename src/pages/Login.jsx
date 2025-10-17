@@ -240,7 +240,17 @@ const Login = () => {
           </div>
         </div>
       )}
-      <ToastContainer />
+      <ToastContainer
+  closeButton={({ closeToast }) => (
+    <button
+      className="custom-toast-close"
+      onClick={closeToast}
+      style={{ background: "none", border: "none", cursor: "pointer" }}
+    >
+      <i className="fas fa-times" style={{ color: "var(--color-text-secondary)", fontSize: "1.2rem" }}></i>
+    </button>
+  )}
+/>
     </div>
   );
 };

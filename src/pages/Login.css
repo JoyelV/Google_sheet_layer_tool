@@ -272,6 +272,73 @@ button:disabled::after {
   color: white;
 }
 
+/* === Toast Message Styling === */
+.Toastify__toast {
+  border-radius: 8px;
+  padding: var(--spacing-sm);
+  font-size: 0.95rem;
+  color: var(--color-text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative; /* Ensure positioning context for the close button */
+}
+
+/* Success Toast */
+.Toastify__toast--success {
+  background: #dcfce7; /* Light green background */
+  color: var(--color-text);
+}
+
+/* Error Toast */
+.Toastify__toast--error {
+  background: #fee2e2; /* Light red background */
+  color: var(--color-text);
+}
+
+/* Close Button Styling */
+.Toastify__close-button {
+  position: absolute;
+  top: 50%;
+  right: var(--spacing-xs); /* Position on the right */
+  transform: translateY(-50%); /* Center vertically */
+  color: var(--color-text-secondary); /* Icon color */
+  opacity: 0.7;
+  transition: opacity 0.3s ease, color 0.3s ease;
+  font-size: 1.2rem; /* Adjust icon size */
+  padding: 4px; /* Add some padding for better click area */
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1;
+  color: var(--color-primary); /* Hover color */
+}
+
+/* Optional: Customize the close icon (X) */
+.Toastify__close-button > svg {
+  width: 16px; /* Adjust icon size */
+  height: 16px;
+  stroke-width: 2; /* Make the icon bolder */
+}
+
+/* Ensure the toast body doesn't overlap with the close button */
+.Toastify__toast-body {
+  padding-right: var(--spacing-md); /* Add padding to avoid text overlapping the close button */
+}
+
+.custom-toast-close {
+  position: absolute;
+  top: 50%;
+  right: var(--spacing-xs);
+  transform: translateY(-50%);
+  padding: 4px;
+  opacity: 0.7;
+}
+.custom-toast-close:hover {
+  opacity: 1;
+  color: var(--color-primary);
+}
 
 /* === Responsive Design === */
 @media (max-width: var(--breakpoint-mobile)) {

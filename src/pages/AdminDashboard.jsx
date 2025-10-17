@@ -425,18 +425,16 @@ const editUser = async (user) => {
         {renderContent()}
       </div>
       <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-        closeButton={true} 
-      />
+  closeButton={({ closeToast }) => (
+    <button
+      className="custom-toast-close"
+      onClick={closeToast}
+      style={{ background: "none", border: "none", cursor: "pointer" }}
+    >
+      <i className="fas fa-times" style={{ color: "var(--color-text-secondary)", fontSize: "1.2rem" }}></i>
+    </button>
+  )}
+/>
     </div>
   );
 };
