@@ -1,14 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import secureLocalStorage from "react-secure-storage";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
 const ProtectedRoute = () => {
   const token = secureLocalStorage.getItem('token');
-  
-  if (!token) {
-    return <Navigate to="/" replace />;
-  }
+  if (!token) return <Navigate to="/" replace />;
   return <Outlet />;
 };
 
@@ -29,6 +28,17 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* Global ToastContainer */}
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        draggable
+      />
     </BrowserRouter>
   );
 }

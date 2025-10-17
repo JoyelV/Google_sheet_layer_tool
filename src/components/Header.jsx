@@ -29,7 +29,7 @@ const Header = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
-      toast.success("You have successfully logged out"); // show success toast
+      toast.success("You have successfully logged out"); 
     } catch (error) {
       console.error("Logout failed:", error);
       toast.error("Logout failed!"); // optional
