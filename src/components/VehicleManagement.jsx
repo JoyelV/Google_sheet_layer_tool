@@ -4,9 +4,9 @@ import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { AutoComplete } from "primereact/autocomplete";
 import { ToastContainer, toast } from "react-toastify";
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { confirmDialog } from "primereact/confirmdialog";
 
-import './VehicleManagement.css'
+import "./VehicleManagement.css";
 
 const debounce = (func, wait) => {
   let timeout;
@@ -183,49 +183,51 @@ const VehicleManagement = ({
   });
 
   const handleFileChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const validTypes = ["text/csv", "application/vnd.ms-excel"];
-  const validExtension = file.name.toLowerCase().endsWith(".csv");
-  if (!validTypes.includes(file.type) || !validExtension) {
-    toast.error("Please upload a valid CSV file.");
-    e.target.value = null;
-    return;
-  }
+    const validTypes = ["text/csv", "application/vnd.ms-excel"];
+    const validExtension = file.name.toLowerCase().endsWith(".csv");
+    if (!validTypes.includes(file.type) || !validExtension) {
+      toast.error("Please upload a valid CSV file.");
+      e.target.value = null;
+      return;
+    }
 
-  setIsUploading(true);
-  setUploadProgress(0);
-  const formData = new FormData();
-  formData.append("csvFile", file);
-
-  try {
-    await bulkInsertVehicles(formData, (progressEvent) => {
-      const percentCompleted = Math.round(
-        (progressEvent.loaded * 100) / progressEvent.total
-      );
-      setUploadProgress(percentCompleted);
-    });
-    toast.success("CSV uploaded successfully!");
-  } catch (err) {
-    console.error("Upload failed:", err);
-
-    // Check if API sent a response message
-    const apiMessage =
-      err.response?.data?.message || err.response?.data || err.message || "CSV upload failed";
-
-    toast.error(apiMessage, {
-      position: "top-right",
-      autoClose: 8000,
-      theme: "colored",
-    });
-  } finally {
-    setIsUploading(false);
+    setIsUploading(true);
     setUploadProgress(0);
-    e.target.value = null;
-  }
-};
+    const formData = new FormData();
+    formData.append("csvFile", file);
 
+    try {
+      await bulkInsertVehicles(formData, (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        setUploadProgress(percentCompleted);
+      });
+      toast.success("CSV uploaded successfully!");
+    } catch (err) {
+      console.error("Upload failed:", err);
+
+      // Check if API sent a response message
+      const apiMessage =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "CSV upload failed";
+
+      toast.error(apiMessage, {
+        position: "top-right",
+        autoClose: 8000,
+        theme: "colored",
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      e.target.value = null;
+    }
+  };
 
   const handleAddSubmit = async () => {
     const errors = validateForm(form);
@@ -342,27 +344,29 @@ const VehicleManagement = ({
 
   const handleRevert = async (previousData) => {
     confirmDialog({
-  message: "Are you sure you want to revert to this previous version?",
-  header: "Confirm Revert",
-  icon: "pi pi-undo",
-  acceptLabel: "Yes, Revert",
-  rejectLabel: "Cancel",
-  accept: async () => {
-    try {
-      const result = await editVehicle({ id: selectedVehicleId, ...previousData });
-      if (result.success) {
-        toast.success("Vehicle reverted successfully!");
-        setShowHistoryModal(false);
-      } else {
-        toast.error(result.message || "Failed to revert vehicle.");
-      }
-    } catch (err) {
-      console.error("Failed to revert:", err);
-      toast.error("Failed to revert vehicle.");
-    }
-  },
-});
-
+      message: "Are you sure you want to revert to this previous version?",
+      header: "Confirm Revert",
+      icon: "pi pi-undo",
+      acceptLabel: "Yes, Revert",
+      rejectLabel: "Cancel",
+      accept: async () => {
+        try {
+          const result = await editVehicle({
+            id: selectedVehicleId,
+            ...previousData,
+          });
+          if (result.success) {
+            toast.success("Vehicle reverted successfully!");
+            setShowHistoryModal(false);
+          } else {
+            toast.error(result.message || "Failed to revert vehicle.");
+          }
+        } catch (err) {
+          console.error("Failed to revert:", err);
+          toast.error("Failed to revert vehicle.");
+        }
+      },
+    });
   };
 
   const debouncedFetchVehicles = useRef(
@@ -412,7 +416,6 @@ const VehicleManagement = ({
 
   return (
     <section className="content-section">
-
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -432,7 +435,10 @@ const VehicleManagement = ({
             className="action-buttons"
             style={{ display: "flex", gap: "10px" }}
           >
-            <button className="btn add-row" onClick={() => setShowAddModal(true)}>
+            <button
+              className="btn add-row"
+              onClick={() => setShowAddModal(true)}
+            >
               ➕ Add Vehicle
             </button>
             <button
@@ -674,15 +680,15 @@ const VehicleManagement = ({
                         className="icon-btn delete"
                         onClick={() => {
                           confirmDialog({
-  message: "Are you sure you want to delete this vehicle?",
-  header: "Confirm Deletion",
-  icon: "pi pi-exclamation-triangle",
-  acceptClassName: "p-button-danger",
-  acceptLabel: "Yes, Delete",
-  rejectLabel: "Cancel",
-  accept: () => deleteVehicle(v.id),
-});
-
+                            message:
+                              "Are you sure you want to delete this vehicle?",
+                            header: "Confirm Deletion",
+                            icon: "pi pi-exclamation-triangle",
+                            acceptClassName: "p-button-danger",
+                            acceptLabel: "Yes, Delete",
+                            rejectLabel: "Cancel",
+                            accept: () => deleteVehicle(v.id),
+                          });
                         }}
                       >
                         🗑️
@@ -699,7 +705,10 @@ const VehicleManagement = ({
               ))
             ) : (
               <tr>
-                <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
+                <td
+                  colSpan={isViewer ? 13 : 14}
+                  style={{ textAlign: "center" }}
+                >
                   No vehicle data found
                 </td>
               </tr>
@@ -860,7 +869,9 @@ const VehicleManagement = ({
                           return;
                         setEditData({ ...editData, [key]: val });
                       }}
-                      min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+                      min={
+                        key.match(/Price|Value|odometer|Year/) ? 0 : undefined
+                      }
                       style={{
                         padding: "8px",
                         borderRadius: "6px",
@@ -931,7 +942,9 @@ const VehicleManagement = ({
                             icon="pi pi-trash"
                             severity="danger"
                             text
-                            onClick={() => handleDeleteBatchFromList(batch.batchId)}
+                            onClick={() =>
+                              handleDeleteBatchFromList(batch.batchId)
+                            }
                           />
                         </td>
                       </tr>
@@ -951,7 +964,13 @@ const VehicleManagement = ({
             style={{ width: "30vw" }}
             onHide={() => setShowDeleteModal(false)}
             footer={
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                }}
+              >
                 <Button
                   label="Cancel"
                   className="btn cancel"
@@ -1000,12 +1019,14 @@ const VehicleManagement = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(entry.changes || {}).map(([key, value]) => (
-                          <tr key={key}>
-                            <td className="history-key">{key}</td>
-                            <td className="history-value">{String(value)}</td>
-                          </tr>
-                        ))}
+                        {Object.entries(entry.changes || {}).map(
+                          ([key, value]) => (
+                            <tr key={key}>
+                              <td className="history-key">{key}</td>
+                              <td className="history-value">{String(value)}</td>
+                            </tr>
+                          )
+                        )}
                       </tbody>
                     </table>
                     {currentUser?.role === "admin" && (

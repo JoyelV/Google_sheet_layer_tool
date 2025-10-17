@@ -156,8 +156,10 @@ tbody tr:hover {
 }
 
 .filter-bar .p-autocomplete-items .p-autocomplete-item {
-  padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 10px);
+  padding: clamp(10px, 2vw, 12px) clamp(12px, 2.5vw, 14px);
   font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+  line-height: 1.5;
+  margin: 2px 0; 
 }
 
 .filter-bar .p-autocomplete-items .p-autocomplete-item:hover {
@@ -516,6 +518,7 @@ tbody tr:hover {
     flex-direction: column;
     align-items: flex-start;
     gap: clamp(6px, 1.5vw, 8px);
+    margin-top: 10px;
   }
 
   .action-buttons {
@@ -557,6 +560,7 @@ tbody tr:hover {
     flex-direction: column;
     align-items: flex-start;
     gap: clamp(5px, 1.2vw, 6px);
+    margin-top: 20px;
   }
 
   .action-buttons {
@@ -624,6 +628,7 @@ tbody tr:hover {
 
   .crud-actions {
     gap: clamp(4px, 1vw, 5px);
+    margin-top: 35px;
   }
 
   .filter-bar {

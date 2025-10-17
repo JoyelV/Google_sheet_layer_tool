@@ -11,29 +11,26 @@ const Login = () => {
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [forgotEmail, setForgotEmail] = useState("");
   const [showForgotModal, setShowForgotModal] = useState(false);
-
-  // === RESET PASSWORD STATES ===
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetData, setResetData] = useState({
     email: "",
     otp: "",
     newPassword: "",
   });
-
   const navigate = useNavigate();
 
-  // === LOGIN FUNCTION ===
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) return setError("All fields are required");
     setError("");
     setLoading(true);
-
     try {
-      const { data } = await axios.post("/auth/login", { email, password });
+      const { data, headers } = await axios.post("/api/auth/login", { email, password });
+      console.log("Login API Response:", data); 
+      console.log("Set-Cookie Header:", headers["set-cookie"] || "No cookies set"); 
+
       secureLocalStorage.setItem("token", data.data.accessToken);
       secureLocalStorage.setItem("user", {
         name: data.data.user.name,
@@ -46,9 +43,9 @@ const Login = () => {
         autoClose: 2000,
         theme: "colored",
       });
-
       setTimeout(() => navigate("/admin"), 1500);
     } catch (err) {
+      console.error("Login Error:", err.response?.data || err.message); 
       setError(err.response?.data?.message || "Login failed");
       toast.error(err.response?.data?.message || "Invalid credentials", {
         position: "top-right",
@@ -60,24 +57,19 @@ const Login = () => {
     }
   };
 
-  // === FORGOT PASSWORD FUNCTION ===
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!forgotEmail)
       return toast.error("Please enter your registered email address");
-
     try {
-      const { data } = await axios.post("/auth/forgot-password", {
+      const { data } = await axios.post("/api/auth/forgot-password", {
         email: forgotEmail,
       });
-
       toast.success(data.message || "OTP sent to your email", {
         position: "top-right",
         autoClose: 3000,
         theme: "colored",
       });
-
-      // Pre-fill the reset email and open reset modal
       setResetData((prev) => ({ ...prev, email: forgotEmail }));
       setShowForgotModal(false);
       setShowResetModal(true);
@@ -93,27 +85,22 @@ const Login = () => {
     }
   };
 
-  // === RESET PASSWORD FUNCTION ===
   const handleResetPassword = async (e) => {
     e.preventDefault();
     const { email, otp, newPassword } = resetData;
-
     if (!email || !otp || !newPassword)
       return toast.error("All fields are required");
-
     try {
-      const { data } = await axios.post("/auth/reset-password", {
+      const { data } = await axios.post("/api/auth/reset-password", {
         email,
         otp,
         newPassword,
       });
-
       toast.success(data.message || "Password reset successfully!", {
         position: "top-right",
         autoClose: 3000,
         theme: "colored",
       });
-
       setShowResetModal(false);
       setResetData({ email: "", otp: "", newPassword: "" });
     } catch (err) {
@@ -136,7 +123,6 @@ const Login = () => {
         </div>
         <h2 className="login-title">Welcome Back</h2>
         <p className="login-subtitle">Sign in to access your dashboard</p>
-
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <div className="input-wrapper">
@@ -151,7 +137,6 @@ const Login = () => {
               <label htmlFor="email">Email Address</label>
             </div>
           </div>
-
           <div className="form-group">
             <div className="input-wrapper">
               <i className="fas fa-lock"></i>
@@ -165,14 +150,11 @@ const Login = () => {
               <label htmlFor="password">Password</label>
             </div>
           </div>
-
           {error && <p className="global-error">{error}</p>}
-
           <div className="login-actions">
             <button type="submit" disabled={loading}>
               {loading ? "Signing In..." : "Sign In"}
             </button>
-
             <button
               type="button"
               className="forgot-password-link"
@@ -182,11 +164,8 @@ const Login = () => {
             </button>
           </div>
         </form>
-
         <p className="footer-text">Secure access to Google Sheets</p>
       </div>
-
-      {/* === Forgot Password Modal === */}
       {showForgotModal && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -214,8 +193,6 @@ const Login = () => {
           </div>
         </div>
       )}
-
-      {/* === Reset Password Modal === */}
       {showResetModal && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -263,7 +240,6 @@ const Login = () => {
           </div>
         </div>
       )}
-
       <ToastContainer />
     </div>
   );

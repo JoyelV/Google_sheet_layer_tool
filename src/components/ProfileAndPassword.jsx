@@ -29,7 +29,7 @@ const ProfileAndPassword = () => {
   // Fetch profile
   const fetchProfile = async () => {
     try {
-      const res = await axios.get("/auth/profile");
+      const res = await axios.get("/api/auth/profile");
       if (res.data.success) {
         setProfile(res.data.data.user);
       }
@@ -56,7 +56,7 @@ const ProfileAndPassword = () => {
     }
     setLoadingPassword(true);
     try {
-      const res = await axios.put("/auth/change-password", {
+      const res = await axios.put("/api/auth/change-password", {
         currentPassword,
         newPassword,
       });

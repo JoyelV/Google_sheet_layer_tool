@@ -69,7 +69,7 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
+        `/api/users/?page=${page}&limit=${limit}&role=${role}&status=${status}&search=${encodeURIComponent(
           search
         )}&sortBy=${sortBy}&sortOrder=${sortOrder}`
       );
@@ -118,7 +118,7 @@ const AdminDashboard = () => {
       const queryParams = new URLSearchParams(
         Object.entries(queryObj).filter(([_, v]) => v !== "")
       ).toString();
-      const res = await axios.get(`/vehicles/all?${queryParams}`);
+      const res = await axios.get(`/api/vehicles/all?${queryParams}`);
       console.log("API Response:", res.data);
       const vehicles = res?.data?.vehicles || [];
       setVehicleData(vehicles);
@@ -170,7 +170,7 @@ const AdminDashboard = () => {
       const queryParams = new URLSearchParams(
         Object.entries(queryObj).filter(([_, v]) => v !== "")
       ).toString();
-      const res = await axios.get(`/vehicles/all?${queryParams}`);
+      const res = await axios.get(`/api/vehicles/all?${queryParams}`);
       setFullVehicleData(res?.data?.vehicles || []);
     } catch (err) {
       console.error("Error fetching full vehicles:", err);
@@ -180,7 +180,7 @@ const AdminDashboard = () => {
 
   const addVehicle = async (formData) => {
     try {
-      const res = await axios.post("/vehicles/insert", formData);
+      const res = await axios.post("/api/vehicles/insert", formData);
       if (res.data?.success) {
         fetchVehicles();
       } else {
@@ -195,7 +195,7 @@ const AdminDashboard = () => {
   const editVehicle = async (updatedVehicle) => {
   try {
     const { id, ...data } = updatedVehicle;
-    const res = await axios.put(`/vehicles/${id}`, data);
+    const res = await axios.put(`/api/vehicles/${id}`, data);
     if (res.data?.success) {
       fetchVehicles();
       return { success: true };
@@ -210,7 +210,7 @@ const AdminDashboard = () => {
 
 const deleteVehicle = async (id) => {
   try {
-    await axios.delete(`/vehicles/${id}`);
+    await axios.delete(`/api/vehicles/${id}`);
     toast.success("Vehicle deleted successfully!");
     fetchVehicles();
   } catch (err) {
@@ -221,7 +221,7 @@ const deleteVehicle = async (id) => {
 
   const bulkInsertVehicles = async (formData, onProgress) => {
     try {
-      const res = await axios.post("/vehicles/bulk-insert", formData, {
+      const res = await axios.post("/api/vehicles/bulk-insert", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: onProgress,
       });
@@ -235,7 +235,7 @@ const deleteVehicle = async (id) => {
 
   const listBulkInsertions = async () => {
     try {
-      const res = await axios.get("/vehicles/batches/list");
+      const res = await axios.get("/api/vehicles/batches/list");
       const list = res.data?.data || [];
       const formatted = list.map((batch) => ({
         batchId: batch.batchId,
@@ -260,7 +260,7 @@ const deleteVehicle = async (id) => {
   rejectLabel: "Cancel",
   accept: async () => {
     try {
-      await axios.delete(`/vehicles/batch/${batchId}`);
+      await axios.delete(`/api/vehicles/batch/${batchId}`);
       toast.success("Bulk insertion deleted successfully!");
       fetchVehicles();
     } catch (err) {
@@ -274,7 +274,7 @@ const deleteVehicle = async (id) => {
 
   const getRowHistory = async (id) => {
     try {
-      const res = await axios.get(`/vehicles/${id}/history`);
+      const res = await axios.get(`/api/vehicles/${id}/history`);
       const historyArray = res.data?.history || [];
       const formatted = historyArray.map((item) => ({
         updatedAt: item.createdAt,
@@ -294,7 +294,7 @@ const deleteVehicle = async (id) => {
 
   const addUser = async (newUser) => {
     try {
-      const res = await axios.post("/users/", newUser);
+      const res = await axios.post("/api/users/", newUser);
       if (res.data.success) {
         await fetchUsers(filters);
         return { success: true };
@@ -316,7 +316,7 @@ const editUser = async (user) => {
     return { success: false, message: "Missing fields" };
   }
   try {
-    const res = await axios.put(`/users/${id}`, { name, email, role });
+    const res = await axios.put(`/api/users/${id}`, { name, email, role });
     if (res.data.success) {
       await fetchUsers(filters);
       //toast.success("User updated successfully!");
@@ -335,7 +335,7 @@ const editUser = async (user) => {
   const toggleBlock = async (user) => {
     try {
       const newStatus = user.status === "active" ? "blocked" : "active";
-      const res = await axios.put(`/users/${user.id}`, { status: newStatus });
+      const res = await axios.put(`/api/users/${user.id}`, { status: newStatus });
       if (res.data.success) {
         await fetchUsers(filters);
         return { success: true };
@@ -350,7 +350,7 @@ const editUser = async (user) => {
 
   const deleteUser = async (id) => {
     try {
-      await axios.delete(`/users/${id}`);
+      await axios.delete(`/api/users/${id}`);
       await fetchUsers(filters);
       return { success: true };
     } catch (err) {
