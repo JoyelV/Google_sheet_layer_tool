@@ -421,7 +421,7 @@ tbody tr:hover {
 .p-confirm-dialog {
   background: white;
   border-radius: 12px;
-  padding: 10px;
+  padding: 20px;
   max-width: 360px;
   width: 95%;
   margin: 0 auto;
@@ -480,7 +480,6 @@ tbody tr:hover {
   background: rgba(0, 0, 0, 0.1) !important;
   backdrop-filter: none !important;
 }
-
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
