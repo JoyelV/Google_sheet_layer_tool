@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "../../src/api/axiosInstance"; 
 import secureLocalStorage from "react-secure-storage";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import './Header.css';
 
 const Header = () => {
@@ -13,7 +15,6 @@ const Header = () => {
     if (storedUser && typeof storedUser === "object") {
       setUser(storedUser);
     } else {
-      console.error("Invalid user data or no user found");
       navigate("/login");
     }
   }, [navigate]);
@@ -28,26 +29,43 @@ const Header = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
+      toast.success("You have successfully logged out"); // show success toast
     } catch (error) {
       console.error("Logout failed:", error);
+      toast.error("Logout failed!"); // optional
     } finally {
       secureLocalStorage.removeItem("token");
       secureLocalStorage.removeItem("user");
-      navigate("/login");
+
+      // Delay navigation slightly so user sees toast
+      setTimeout(() => navigate("/login"), 500);
     }
   };
 
   return (
-    <header className="header-bar">
-      <div className="user-info">
-        <span>{user.name || "Guest"}</span> | <span>{user.role || "No Role"}</span>
-      </div>
-      <div className="header-actions">
-        <button className="btn logout" onClick={handleLogout}>
-          Logout
-        </button>
-      </div>
-    </header>
+    <>
+      <header className="header-bar">
+        <div className="user-info">
+          <span>{user.name || "Guest"}</span> | <span>{user.role || "No Role"}</span>
+        </div>
+        <div className="header-actions">
+          <button className="btn logout" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {/* Toast container placed outside the header so layout stays intact */}
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        draggable
+      />
+    </>
   );
 };
 
