@@ -85,35 +85,54 @@ const Login = () => {
     }
   };
 
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    const { email, otp, newPassword } = resetData;
-    if (!email || !otp || !newPassword)
-      return toast.error("All fields are required");
-    try {
-      const { data } = await axios.post("/api/auth/reset-password", {
-        email,
-        otp,
-        newPassword,
-      });
-      toast.success(data.message || "Password reset successfully!", {
+  const validatePassword = (password) => {
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return regex.test(password);
+};
+
+
+const handleResetPassword = async (e) => {
+  e.preventDefault();
+  const { email, otp, newPassword, confirmPassword } = resetData;
+
+  if (!email || !otp || !newPassword || !confirmPassword) {
+    return toast.error("All fields are required");
+  }
+
+  if (newPassword !== confirmPassword) {
+    return toast.error("Passwords do not match");
+  }
+
+  if (!validatePassword(newPassword)) {
+    return toast.error(
+      "Password must be at least 8 characters, include uppercase, lowercase, number, and special character"
+    );
+  }
+
+  try {
+    const { data } = await axios.post("/api/auth/reset-password", {
+      email,
+      otp,
+      newPassword,
+    });
+    toast.success(data.message || "Password reset successfully!", {
+      position: "top-right",
+      autoClose: 3000,
+      theme: "colored",
+    });
+    setShowResetModal(false);
+    setResetData({ email: "", otp: "", newPassword: "", confirmPassword: "" });
+  } catch (err) {
+    toast.error(
+      err.response?.data?.message || "Failed to reset password",
+      {
         position: "top-right",
         autoClose: 3000,
         theme: "colored",
-      });
-      setShowResetModal(false);
-      setResetData({ email: "", otp: "", newPassword: "" });
-    } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to reset password",
-        {
-          position: "top-right",
-          autoClose: 3000,
-          theme: "colored",
-        }
-      );
-    }
-  };
+      }
+    );
+  }
+};
 
   return (
     <div className="login-container">
@@ -226,6 +245,16 @@ const Login = () => {
                 }
                 required
               />
+              <input
+  type="password"
+  placeholder="Confirm Password"
+  value={resetData.confirmPassword}
+  onChange={(e) =>
+    setResetData({ ...resetData, confirmPassword: e.target.value })
+  }
+  required
+/>
+
               <div className="modal-buttons">
                 <button type="submit">Reset Password</button>
                 <button

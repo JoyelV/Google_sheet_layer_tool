@@ -3,7 +3,7 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { AutoComplete } from "primereact/autocomplete";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { confirmDialog } from "primereact/confirmdialog";
 
 import "./VehicleManagement.css";
@@ -300,38 +300,40 @@ const VehicleManagement = ({
   };
 
   const handleDeleteBatch = async () => {
-    if (!deleteBatchId.trim()) {
-      toast.error("Please enter a valid Batch ID.");
-      return;
+  if (!deleteBatchId.trim()) {
+    toast.error("Please enter a valid Batch ID.");
+    return;
+  }
+  try {
+    await deleteBulkInsertion(deleteBatchId); // Wait for deletion
+    const updatedList = await listBulkInsertions(); // Fetch updated list
+    setBulkList(updatedList || []); // Update state
+    setDeleteBatchId(""); // Clear the input
+    setShowDeleteModal(false); // Close the delete modal
+    //toast.success("Bulk insertion deleted successfully!");
+    if (updatedList.length === 0) {
+      setShowListModal(false); // Close the list modal if empty
     }
-    try {
-      await deleteBulkInsertion(deleteBatchId);
-      const updatedList = await listBulkInsertions();
-      setBulkList(updatedList || []);
-      setDeleteBatchId("");
-      setShowDeleteModal(false);
-      if (updatedList.length === 0) {
-        setShowListModal(false);
-      }
-    } catch (err) {
-      console.error("Error in handleDeleteBatch:", err);
-      toast.error("Failed to delete bulk insertion.");
-    }
-  };
+  } catch (err) {
+    console.error("Error in handleDeleteBatch:", err);
+    //toast.error("Failed to delete bulk insertion.");
+  }
+};
 
-  const handleDeleteBatchFromList = async (batchId) => {
-    try {
-      await deleteBulkInsertion(batchId);
-      const updatedList = await listBulkInsertions();
-      setBulkList(updatedList || []);
-      if (updatedList.length === 0) {
-        setShowListModal(false);
-      }
-    } catch (err) {
-      console.error("Error in handleDeleteBatchFromList:", err);
-      toast.error("Failed to delete bulk insertion.");
+ const handleDeleteBatchFromList = async (batchId) => {
+  try {
+    await deleteBulkInsertion(batchId); // Wait for deletion to complete
+    const updatedList = await listBulkInsertions(); // Fetch the updated list
+    setBulkList(updatedList || []); // Update the state
+    toast.success("Bulk insertion deleted successfully!");
+    if (updatedList.length === 0) {
+      setShowListModal(false); // Close the modal if the list is empty
     }
-  };
+  } catch (err) {
+    console.error("Error in handleDeleteBatchFromList:", err);
+    toast.error("Failed to delete bulk insertion.");
+  }
+};
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
 
@@ -380,6 +382,10 @@ const VehicleManagement = ({
       debouncedFetchVehicles(vehicleFilters);
     }
   }, [vehicleFilters, debouncedFetchVehicles]);
+
+  useEffect(() => {
+  console.log("bulkList updated:", bulkList); // Debug log
+}, [bulkList]);
 
   // Autocomplete suggestion handlers
   const searchYears = (event) => {

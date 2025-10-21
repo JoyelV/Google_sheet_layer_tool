@@ -232,44 +232,51 @@ const deleteVehicle = async (id) => {
     }
   };
 
-  const listBulkInsertions = async () => {
-    try {
-      const res = await axios.get("/api/vehicles/batches/list");
-      const list = res.data?.data || [];
-      const formatted = list.map((batch) => ({
-        batchId: batch.batchId,
-        recordCount: batch.recordCount,
-        createdAt: batch.createdAt,
-        status: "Completed",
-      }));
-      return formatted;
-    } catch (err) {
-      console.error("Error listing bulk insertions:", err);
-      return [];
-    }
-  };
+ const listBulkInsertions = async () => {
+  try {
+    const res = await axios.get("/api/vehicles/batches/list");
+    const list = res.data?.data || [];
+    const formatted = list.map((batch) => ({
+      batchId: batch.batchId,
+      recordCount: batch.recordCount,
+      createdAt: batch.createdAt,
+      status: "Completed",
+    }));
+    console.log("Fetched bulk insertions:", formatted); // Debug log
+    return formatted;
+  } catch (err) {
+    console.error("Error listing bulk insertions:", err);
+    return [];
+  }
+};
 
   const deleteBulkInsertion = async (batchId) => {
+  return new Promise((resolve, reject) => {
     confirmDialog({
-  message: "Are you sure you want to delete this bulk insertion?",
-  header: "Delete Confirmation",
-  icon: "pi pi-exclamation-triangle",
-  acceptClassName: "p-button-danger",
-  acceptLabel: "Yes, Delete",
-  rejectLabel: "Cancel",
-  accept: async () => {
-    try {
-      await axios.delete(`/api/vehicles/batch/${batchId}`);
-      toast.success("Bulk insertion deleted successfully!");
-      fetchVehicles();
-    } catch (err) {
-      console.error("Error deleting bulk insertion:", err);
-      toast.error("Failed to delete bulk insertion.");
-    }
-  },
-});
-
-  };
+      message: "Are you sure you want to delete this bulk insertion?",
+      header: "Delete Confirmation",
+      icon: "pi pi-exclamation-triangle",
+      acceptClassName: "p-button-danger",
+      acceptLabel: "Yes, Delete",
+      rejectLabel: "Cancel",
+      accept: async () => {
+        try {
+          await axios.delete(`/api/vehicles/batch/${batchId}`);
+          //toast.success("Bulk insertion deleted successfully!");
+          fetchVehicles();
+          resolve(true); // Resolve the promise on success
+        } catch (err) {
+          console.error("Error deleting bulk insertion:", err);
+          //toast.error("Failed to delete bulk insertion.");
+          reject(err); // Reject the promise on error
+        }
+      },
+      reject: () => {
+        reject(new Error("Deletion cancelled")); // Reject if user cancels
+      },
+    });
+  });
+};
 
   const getRowHistory = async (id) => {
     try {
@@ -332,20 +339,27 @@ const editUser = async (user) => {
 };
 
   const toggleBlock = async (user) => {
-    try {
-      const newStatus = user.status === "active" ? "blocked" : "active";
-      const res = await axios.put(`/api/users/${user.id}`, { status: newStatus });
-      if (res.data.success) {
-        await fetchUsers(filters);
-        return { success: true };
-      } else {
-        return { success: false };
-      }
-    } catch (err) {
-      console.error("Error toggling user:", err);
+  try {
+    const newStatus = user.status === "active" ? "blocked" : "active";
+    const res = await axios.put(`/api/users/${user.id}`, { status: newStatus });
+    if (res.data.success) {
+      await fetchUsers(filters);
+      toast.success(
+        user.status === "deleted"
+          ? "User restored successfully!"
+          : `User ${newStatus === "blocked" ? "blocked" : "unblocked"} successfully!`
+      );
+      return { success: true };
+    } else {
+      toast.error(res.data.message || "Failed to update user status.");
       return { success: false };
     }
-  };
+  } catch (err) {
+    console.error("Error toggling user:", err);
+    toast.error("Server error. Try again later.");
+    return { success: false };
+  }
+};
 
   const deleteUser = async (id) => {
     try {

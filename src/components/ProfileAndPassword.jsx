@@ -45,36 +45,72 @@ const ProfileAndPassword = () => {
     fetchProfile();
   }, []);
 
-  // Handle password change
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return showToast("warn", "Missing Fields", "Please fill in all fields.");
+  // Add this validation function at the top
+const validatePassword = (password) => {
+  // Minimum 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+  return regex.test(password);
+};
+
+// Handle password change
+const handleChangePassword = async (e) => {
+  e.preventDefault();
+
+  // Check for empty fields
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return showToast("warn", "Missing Fields", "Please fill in all fields.");
+  }
+
+  // Check if new password matches confirm password
+  if (newPassword !== confirmPassword) {
+    return showToast(
+      "error",
+      "Validation Error",
+      "New password and confirm password do not match."
+    );
+  }
+
+  // Check password strength
+  if (!validatePassword(newPassword)) {
+    return showToast(
+      "error",
+      "Weak Password",
+      "Password must be at least 8 characters, include uppercase, lowercase, number, and special character."
+    );
+  }
+
+  setLoadingPassword(true);
+
+  try {
+    const res = await axios.put("/api/auth/change-password", {
+      currentPassword,
+      newPassword,
+    });
+
+    if (res.data.success) {
+      showToast(
+        "success",
+        "Password Updated",
+        "Your password has been changed successfully."
+      );
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } else {
+      showToast("error", "Failed", res.data.message || "Password update failed.");
     }
-    if (newPassword !== confirmPassword) {
-      return showToast("error", "Validation Error", "New password and confirm password do not match.");
-    }
-    setLoadingPassword(true);
-    try {
-      const res = await axios.put("/api/auth/change-password", {
-        currentPassword,
-        newPassword,
-      });
-      if (res.data.success) {
-        showToast("success", "Password Updated", "Your password has been changed successfully.");
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        showToast("error", "Failed", res.data.message || "Password update failed.");
-      }
-    } catch (err) {
-      console.error("Error changing password:", err.response?.data || err.message);
-      showToast("error", "Error", err.response?.data?.message || "Failed to change password.");
-    } finally {
-      setLoadingPassword(false);
-    }
-  };
+  } catch (err) {
+    console.error("Error changing password:", err.response?.data || err.message);
+    showToast(
+      "error",
+      "Error",
+      err.response?.data?.message || "Failed to change password."
+    );
+  } finally {
+    setLoadingPassword(false);
+  }
+};
+
 
   return (
     <div className="content-profile">

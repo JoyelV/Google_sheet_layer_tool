@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { InputText } from "primereact/inputtext";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
@@ -183,18 +183,20 @@ const UserManagement = ({
     }
   };
 
-  const openConfirmDialog = (user, actionType) => {
-    setSelectedUser(user);
-    setConfirmAction(actionType);
-    setConfirmMessage(
-      actionType === "block"
-        ? `Are you sure you want to ${
+const openConfirmDialog = (user, actionType) => {
+  setSelectedUser(user);
+  setConfirmAction(actionType);
+  setConfirmMessage(
+    actionType === "block"
+      ? user.status === "deleted"
+        ? "Are you sure you want to restore this user to active status?"
+        : `Are you sure you want to ${
             user.status === "blocked" ? "unblock" : "block"
           } this user?`
-        : "Are you sure you want to delete this user?"
-    );
-    setConfirmDialogVisible(true);
-  };
+      : "Are you sure you want to delete this user?"
+  );
+  setConfirmDialogVisible(true);
+};
 
   const handleConfirmAction = async () => {
     if (confirmAction === "block") {
@@ -209,23 +211,21 @@ const UserManagement = ({
   };
 
   const handleToggleBlock = async (user) => {
-    if (user.email === currentUser?.email) {
-      toast.warning("You cannot block your own account!");
-      return;
+  if (user.email === currentUser?.email) {
+    toast.warning("You cannot block your own account!");
+    return;
+  }
+  try {
+    const result = await toggleBlock(user);
+    if (result?.success) {
+      fetchUsers(filters); // Refresh the user list
+    } else {
+      toast.error("Failed to update user status.");
     }
-    try {
-      const result = await toggleBlock(user);
-      if (result?.success) {
-        const action = user.status === "blocked" ? "unblocked" : "blocked";
-        toast.success(`User ${action} successfully!`);
-        fetchUsers(filters);
-      } else {
-        toast.error("Failed to update user status.");
-      }
-    } catch {
-      toast.error("Something went wrong!");
-    }
-  };
+  } catch {
+    toast.error("Something went wrong!");
+  }
+};
 
   const handleDelete = async (user) => {
     if (user.email === currentUser?.email) {
@@ -540,19 +540,18 @@ const UserManagement = ({
                           <i className="pi pi-pencil" />
                         </button>
                         <button
-                          className="icon-btn toggle"
-                          onClick={() => openConfirmDialog(u, "block")}
-                          disabled={
-                            editingRowId === u.id ||
-                            u.email === currentUser?.email
-                          }
-                        >
-                          {u.status === "blocked" ? (
-                            <i className="pi pi-unlock" />
-                          ) : (
-                            <i className="pi pi-lock" />
-                          )}
-                        </button>
+  className="icon-btn toggle"
+  onClick={() => openConfirmDialog(u, "block")}
+  disabled={editingRowId === u.id || u.email === currentUser?.email}
+>
+  {u.status === "deleted" ? (
+    <i className="pi pi-undo" />
+  ) : u.status === "blocked" ? (
+    <i className="pi pi-unlock" />
+  ) : (
+    <i className="pi pi-lock" />
+  )}
+</button>
                         <button
                           className={`icon-btn delete ${
                             u.status === "deleted" ? "disabled" : ""
