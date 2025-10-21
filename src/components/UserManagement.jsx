@@ -156,6 +156,7 @@ const UserManagement = ({
       toast.success(result.message);
       setEditingRowId(null);
       setEditedUser({});
+      setErrors({});
       fetchUsers(filters);
     } else {
       toast.error(result?.message || "Failed to update user");
@@ -183,20 +184,20 @@ const UserManagement = ({
     }
   };
 
-const openConfirmDialog = (user, actionType) => {
-  setSelectedUser(user);
-  setConfirmAction(actionType);
-  setConfirmMessage(
-    actionType === "block"
-      ? user.status === "deleted"
-        ? "Are you sure you want to restore this user to active status?"
-        : `Are you sure you want to ${
-            user.status === "blocked" ? "unblock" : "block"
-          } this user?`
-      : "Are you sure you want to delete this user?"
-  );
-  setConfirmDialogVisible(true);
-};
+  const openConfirmDialog = (user, actionType) => {
+    setSelectedUser(user);
+    setConfirmAction(actionType);
+    setConfirmMessage(
+      actionType === "block"
+        ? user.status === "deleted"
+          ? "Are you sure you want to restore this user to active status?"
+          : `Are you sure you want to ${
+              user.status === "blocked" ? "unblock" : "block"
+            } this user?`
+        : "Are you sure you want to delete this user?"
+    );
+    setConfirmDialogVisible(true);
+  };
 
   const handleConfirmAction = async () => {
     if (confirmAction === "block") {
@@ -207,25 +208,24 @@ const openConfirmDialog = (user, actionType) => {
     setConfirmDialogVisible(false);
     setSelectedUser(null);
     setConfirmAction(null);
-    fetchUsers(filters);
   };
 
   const handleToggleBlock = async (user) => {
-  if (user.email === currentUser?.email) {
-    toast.warning("You cannot block your own account!");
-    return;
-  }
-  try {
-    const result = await toggleBlock(user);
-    if (result?.success) {
-      fetchUsers(filters); // Refresh the user list
-    } else {
-      toast.error("Failed to update user status.");
+    if (user.email === currentUser?.email) {
+      toast.warning("You cannot block your own account!");
+      return;
     }
-  } catch {
-    toast.error("Something went wrong!");
-  }
-};
+    try {
+      const result = await toggleBlock(user);
+      if (result?.success) {
+        fetchUsers(filters); // Refresh the user list
+      } else {
+        toast.error("Failed to update user status.");
+      }
+    } catch {
+      toast.error("Something went wrong!");
+    }
+  };
 
   const handleDelete = async (user) => {
     if (user.email === currentUser?.email) {
@@ -422,7 +422,7 @@ const openConfirmDialog = (user, actionType) => {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              {/* <th>ID</th> */}
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
@@ -434,14 +434,14 @@ const openConfirmDialog = (user, actionType) => {
             {loading ? (
               <>
                 <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "1rem" }}>
+                  <td colSpan="5" style={{ textAlign: "center", padding: "1rem" }}>
                     <div className="table-spinner"></div>
                     <p>Loading users...</p>
                   </td>
                 </tr>
                 {[...Array(5)].map((_, index) => (
                   <tr key={index}>
-                    {[...Array(6)].map((_, cellIndex) => (
+                    {[...Array(5)].map((_, cellIndex) => ( // Changed colSpan and array length to 5
                       <td key={cellIndex}>
                         <div className="skeleton-loader"></div>
                       </td>
@@ -451,14 +451,14 @@ const openConfirmDialog = (user, actionType) => {
               </>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: "center" }}>
+                <td colSpan="5" style={{ textAlign: "center" }}> {/* Changed colSpan to 5 */}
                   No users found
                 </td>
               </tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.id}</td>
+                  {/* Removed <td>{u.id}</td> */}
                   <td>
                     {editingRowId === u.id ? (
                       <InputText
@@ -540,18 +540,18 @@ const openConfirmDialog = (user, actionType) => {
                           <i className="pi pi-pencil" />
                         </button>
                         <button
-  className="icon-btn toggle"
-  onClick={() => openConfirmDialog(u, "block")}
-  disabled={editingRowId === u.id || u.email === currentUser?.email}
->
-  {u.status === "deleted" ? (
-    <i className="pi pi-undo" />
-  ) : u.status === "blocked" ? (
-    <i className="pi pi-unlock" />
-  ) : (
-    <i className="pi pi-lock" />
-  )}
-</button>
+                          className="icon-btn toggle"
+                          onClick={() => openConfirmDialog(u, "block")}
+                          disabled={editingRowId === u.id || u.email === currentUser?.email}
+                        >
+                          {u.status === "deleted" ? (
+                            <i className="pi pi-undo" />
+                          ) : u.status === "blocked" ? (
+                            <i className="pi pi-unlock" />
+                          ) : (
+                            <i className="pi pi-lock" />
+                          )}
+                        </button>
                         <button
                           className={`icon-btn delete ${
                             u.status === "deleted" ? "disabled" : ""
