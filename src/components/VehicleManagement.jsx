@@ -117,54 +117,78 @@ const VehicleManagement = ({
   ];
 
   const validateForm = (data) => {
-    const errors = {};
-    const isValidDate = (dateString) => {
-      const date = new Date(dateString);
-      return !isNaN(date.getTime());
-    };
-    const isPositiveNumber = (val) =>
-      val !== "" && !isNaN(val) && Number(val) >= 0;
-    const isNonEmptyText = (val) =>
-      typeof val === "string" && val.trim().length > 0;
+  const errors = {};
+  const isValidDate = (dateString) => {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
+  };
+  const isPositiveNumber = (val) =>
+    val !== "" && !isNaN(val) && Number(val) >= 0;
+  const isNonEmptyText = (val) =>
+    typeof val === "string" && val.trim().length > 0;
+  const isNotNumeric = (val) =>
+    typeof val === "string" && !/^\d+$/.test(val.trim()); // Check if value is not purely numeric
+  const hasNoInvalidChars = (val) =>
+    typeof val === "string" && !/[^\w\s]/.test(val.trim()); // Disallow special characters except spaces and alphanumeric
 
-    if (!isNonEmptyText(data.auctionDate)) {
-      errors.auctionDate = "Auction date is required";
-    } else if (!isValidDate(data.auctionDate)) {
-      errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
+  const isValidColorText = (val) =>
+  typeof val === "string" &&
+  /^[a-zA-Z\s]+$/.test(val.trim()) && // only letters and spaces
+  val.trim().length > 0;
+
+  // Validate auctionDate
+  if (!isNonEmptyText(data.auctionDate)) {
+    errors.auctionDate = "Auction date is required";
+  } else if (!isValidDate(data.auctionDate)) {
+    errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
+  }
+
+  // Validate vehicleYear
+  if (!data.vehicleYear) {
+    errors.vehicleYear = "Vehicle year is required";
+  } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
+    errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
+  }
+
+  // Validate text fields
+  ["make", "series", "modelNumber", "engine", "auctionLocation"].forEach((field) => {
+    if (!isNonEmptyText(data[field])) {
+      errors[field] = `${field} is required and cannot be empty or just spaces`;
+    } else if (!isNotNumeric(data[field])) {
+      errors[field] = `${field} cannot be purely numeric`;
+    } else if (!hasNoInvalidChars(data[field])) {
+      errors[field] = `${field} cannot contain special characters`;
     }
-    if (!data.vehicleYear) {
-      errors.vehicleYear = "Vehicle year is required";
-    } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
-      errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
-    }
-    [
-      "make",
-      "series",
-      "modelNumber",
-      "engine",
-      "color",
-      "auctionLocation",
-      "crValue",
-    ].forEach((field) => {
-      if (!isNonEmptyText(data[field])) errors[field] = `${field} is required`;
-    });
-    [
-      "odometer",
-      "auctionSalePrice",
-      "jdWholesaleValue",
-      "jdRetailValue",
-    ].forEach((field) => {
+  });
+
+  // Validate crValue specifically
+  if (!isNonEmptyText(data.crValue)) {
+    errors.crValue = "CR Value is required";
+  } else if (!hasNoInvalidChars(data.crValue)) {
+    errors.crValue = "CR Value cannot contain special characters";
+  }
+
+  if (!isValidColorText(data.color)) {
+  errors.color = "Color should only contain alphabets and spaces (e.g., 'Sky Blue')";
+  }
+
+  // Validate numeric fields
+  ["odometer", "auctionSalePrice", "jdWholesaleValue", "jdRetailValue","crValue"].forEach(
+    (field) => {
       if (
         data[field] === "" ||
         data[field] === null ||
         data[field] === undefined
-      )
+      ) {
         errors[field] = `${field} is required`;
-      else if (!isPositiveNumber(data[field]))
+      } else if (!isPositiveNumber(data[field])) {
         errors[field] = `${field} must be a valid number ≥ 0`;
-    });
-    return errors;
-  };
+      }
+    }
+  );
+
+  return errors;
+};
 
   const [form, setForm] = useState({
     auctionDate: "",
@@ -277,7 +301,10 @@ const VehicleManagement = ({
     };
     const errors = validateForm(relevantData);
     setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+    toast.error("Please fix the validation errors before saving.");
+    return;
+  }
     try {
       const result = await editVehicle(editData);
       if (result.success) {

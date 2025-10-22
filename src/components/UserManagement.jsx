@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { InputText } from "primereact/inputtext";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
+import { Tooltip } from "primereact/tooltip";
 import "react-toastify/dist/ReactToastify.css";
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -66,50 +67,65 @@ const UserManagement = ({
     { label: "Deleted", value: "deleted" },
   ];
 
-  const validateUser = (user, isEdit = false) => {
-    const newErrors = {};
-    if (!user.name?.trim()) {
-      newErrors.name = "Name is required";
-    } else if (user.name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters long";
-    }
-    if (!user.email?.trim()) {
-      newErrors.email = "Email is required";
-    } else if (
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(user.email)
-    ) {
-      newErrors.email = "Invalid email format";
-    }
-    if (!user.role?.trim()) {
-      newErrors.role = "Role is required";
-    } else if (!["admin", "editor", "viewer"].includes(user.role)) {
-      newErrors.role = "Role must be admin, editor, or viewer";
-    }
-    if (!isEdit) {
-      if (!user.password?.trim()) {
-        newErrors.password = "Password is required";
-      } else {
-        const minLength = 8;
-        const hasUpperCase = /[A-Z]/.test(user.password);
-        const hasLowerCase = /[a-z]/.test(user.password);
-        const hasNumber = /[0-9]/.test(user.password);
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(user.password);
-        if (user.password.length < minLength) {
-          newErrors.password = "Password must be at least 8 characters long";
-        } else if (!hasUpperCase) {
-          newErrors.password = "Password must contain at least one uppercase letter";
-        } else if (!hasLowerCase) {
-          newErrors.password = "Password must contain at least one lowercase letter";
-        } else if (!hasNumber) {
-          newErrors.password = "Password must contain at least one number";
-        } else if (!hasSpecialChar) {
-          newErrors.password = "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
-        }
+const validateUser = (user, isEdit = false) => {
+  const newErrors = {};
+
+  // Validate name
+  if (!user.name?.trim()) {
+    newErrors.name = "Name is required and cannot be empty or just spaces";
+  } else if (/^\d+$/.test(user.name.trim())) {
+    newErrors.name = "Name cannot be purely numeric";
+  } else if (user.name.trim().length < 2) {
+    newErrors.name = "Name must be at least 2 characters long";
+  } else if (/[^a-zA-Z0-9\s]/.test(user.name.trim())) {
+    newErrors.name = "Name cannot contain special characters";
+  }
+
+  // Validate email
+  if (!user.email?.trim()) {
+    newErrors.email = "Email is required and cannot be empty or just spaces";
+  } else if (
+    !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(user.email.trim())
+  ) {
+    newErrors.email = "Invalid email format (e.g., user@domain.com)";
+  } else if (user.email.trim().endsWith("@gmail")) {
+    newErrors.email = "Email must include a valid top-level domain (e.g., .com)";
+  }
+
+  // Validate role
+  if (!user.role?.trim()) {
+    newErrors.role = "Role is required";
+  } else if (!["admin", "editor", "viewer"].includes(user.role)) {
+    newErrors.role = "Role must be admin, editor, or viewer";
+  }
+
+  // Validate password (only for adding new user)
+  if (!isEdit) {
+    if (!user.password?.trim()) {
+      newErrors.password = "Password is required and cannot be empty or just spaces";
+    } else {
+      const minLength = 8;
+      const hasUpperCase = /[A-Z]/.test(user.password);
+      const hasLowerCase = /[a-z]/.test(user.password);
+      const hasNumber = /[0-9]/.test(user.password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(user.password);
+      if (user.password.length < minLength) {
+        newErrors.password = "Password must be at least 8 characters long";
+      } else if (!hasUpperCase) {
+        newErrors.password = "Password must contain at least one uppercase letter";
+      } else if (!hasLowerCase) {
+        newErrors.password = "Password must contain at least one lowercase letter";
+      } else if (!hasNumber) {
+        newErrors.password = "Password must contain at least one number";
+      } else if (!hasSpecialChar) {
+        newErrors.password = "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
       }
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -149,19 +165,24 @@ const UserManagement = ({
     setEditedUser({ ...user, status: user.status || "active" });
   };
 
-  const handleSaveClick = async () => {
-    if (!validateUser(editedUser, true)) return;
-    const result = await editUser(editedUser);
-    if (result?.success) {
-      toast.success(result.message);
-      setEditingRowId(null);
-      setEditedUser({});
-      setErrors({});
-      fetchUsers(filters);
-    } else {
-      toast.error(result?.message || "Failed to update user");
-    }
-  };
+const handleSaveClick = async () => {
+  if (!validateUser(editedUser, true)) {
+    toast.error("Please fix the validation errors before saving.");
+    return;
+  }
+  const result = await editUser(editedUser);
+  if (result?.success) {
+    toast.success(result.message);
+    setEditingRowId(null);
+    setEditedUser({});
+    setErrors({});
+    fetchUsers(filters);
+  } else {
+    toast.error(result?.message || "Failed to update user");
+  }
+};
+
+
 
   const handleCancelClick = () => {
     setEditingRowId(null);
@@ -170,19 +191,22 @@ const UserManagement = ({
     toast.info("Edit cancelled");
   };
 
-  const handleAddUser = async () => {
-    if (!validateUser(newUser)) return;
-    const result = await addUser(newUser);
-    if (result?.success) {
-      toast.success("User added successfully!");
-      setShowAddModal(false);
-      setNewUser({ name: "", email: "", role: "", password: "" });
-      setErrors({});
-      fetchUsers(filters);
-    } else {
-      toast.error(result?.message || "Failed to add user.");
-    }
-  };
+const handleAddUser = async () => {
+  if (!validateUser(newUser)) {
+    toast.error("Please fix the validation errors before adding the user.");
+    return;
+  }
+  const result = await addUser(newUser);
+  if (result?.success) {
+    toast.success("User added successfully!");
+    setShowAddModal(false);
+    setNewUser({ name: "", email: "", role: "", password: "" });
+    setErrors({});
+    fetchUsers(filters);
+  } else {
+    toast.error(result?.message || "Failed to add user.");
+  }
+};
 
   const openConfirmDialog = (user, actionType) => {
     setSelectedUser(user);
@@ -320,72 +344,67 @@ const UserManagement = ({
         <p>{confirmMessage}</p>
       </Dialog>
       <Dialog
-        header="Add New User"
-        visible={showAddModal}
-        onHide={() => {
-          setShowAddModal(false);
-          setErrors({});
-        }}
-        style={{ width: "400px" }}
-        footer={renderAddUserDialogFooter()}
+  header="Add New User"
+  visible={showAddModal}
+  onHide={() => {
+    setShowAddModal(false);
+    setErrors({});
+  }}
+  style={{ width: "400px" }}
+  footer={renderAddUserDialogFooter()}
+>
+  <div className="add-user-form">
+    <div className="form-group">
+      <label>Name</label>
+      <InputText
+        value={newUser.name}
+        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+        placeholder="Enter name"
+        className={errors.name ? "p-invalid" : ""}
+      />
+      {errors.name && <small className="error-text">{errors.name}</small>}
+    </div>
+    <div className="form-group">
+      <label>Email</label>
+      <InputText
+        value={newUser.email}
+        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+        placeholder="Enter email"
+        autoComplete="off"
+        className={errors.email ? "p-invalid" : ""}
+      />
+      {errors.email && <small className="error-text">{errors.email}</small>}
+    </div>
+    <div className="form-group">
+      <label>Role</label>
+      <select
+        value={newUser.role}
+        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+        className={`p-inputtext ${errors.role ? "p-invalid" : ""}`}
       >
-        <div className="add-user-form">
-          <div className="form-group">
-            <label>Name</label>
-            <InputText
-              value={newUser.name}
-              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-              placeholder="Enter name"
-            />
-            {errors.name && <small className="error-text">{errors.name}</small>}
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <InputText
-              value={newUser.email}
-              onChange={(e) =>
-                setNewUser({ ...newUser, email: e.target.value })
-              }
-              placeholder="Enter email"
-              autoComplete="off"
-            />
-            {errors.email && (
-              <small className="error-text">{errors.email}</small>
-            )}
-          </div>
-          <div className="form-group">
-            <label>Role</label>
-            <select
-              value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-              className="p-inputtext"
-            >
-              <option value="" disabled>
-                Select role
-              </option>
-              <option value="admin">Admin</option>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
-            </select>
-            {errors.role && <small className="error-text">{errors.role}</small>}
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <InputText
-              type="password"
-              value={newUser.password}
-              onChange={(e) =>
-                setNewUser({ ...newUser, password: e.target.value })
-              }
-              placeholder="Enter password"
-              autoComplete="new-password"
-            />
-            {errors.password && (
-              <small className="error-text">{errors.password}</small>
-            )}
-          </div>
-        </div>
-      </Dialog>
+        <option value="" disabled>
+          Select role
+        </option>
+        <option value="admin">admin</option>
+        <option value="editor">editor</option>
+        <option value="viewer">viewer</option>
+      </select>
+      {errors.role && <small className="error-text">{errors.role}</small>}
+    </div>
+    <div className="form-group">
+      <label>Password</label>
+      <InputText
+        type="password"
+        value={newUser.password}
+        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+        placeholder="Enter password"
+        autoComplete="new-password"
+        className={errors.password ? "p-invalid" : ""}
+      />
+      {errors.password && <small className="error-text">{errors.password}</small>}
+    </div>
+  </div>
+</Dialog>
       <div className="crud-actions">
         <h1 className="section-title">User Management</h1>
         <div
@@ -430,150 +449,188 @@ const UserManagement = ({
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {loading ? (
-              <>
-                <tr>
-                  <td colSpan="5" style={{ textAlign: "center", padding: "1rem" }}>
-                    <div className="table-spinner"></div>
-                    <p>Loading users...</p>
-                  </td>
-                </tr>
-                {[...Array(5)].map((_, index) => (
-                  <tr key={index}>
-                    {[...Array(5)].map((_, cellIndex) => ( // Changed colSpan and array length to 5
-                      <td key={cellIndex}>
-                        <div className="skeleton-loader"></div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </>
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan="5" style={{ textAlign: "center" }}> {/* Changed colSpan to 5 */}
-                  No users found
-                </td>
-              </tr>
-            ) : (
-              users.map((u) => (
-                <tr key={u.id}>
-                  {/* Removed <td>{u.id}</td> */}
-                  <td>
-                    {editingRowId === u.id ? (
-                      <InputText
-                        value={editedUser.name}
-                        onChange={(e) =>
-                          setEditedUser({ ...editedUser, name: e.target.value })
-                        }
-                      />
-                    ) : (
-                      u.name
-                    )}
-                  </td>
-                  <td>
-                    {editingRowId === u.id ? (
-                      <InputText
-                        value={editedUser.email}
-                        onChange={(e) =>
-                          setEditedUser({
-                            ...editedUser,
-                            email: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      u.email
-                    )}
-                  </td>
-                  <td>
-                    {editingRowId === u.id ? (
-                      <select
-                        value={editedUser.role}
-                        onChange={(e) =>
-                          setEditedUser({ ...editedUser, role: e.target.value })
-                        }
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="editor">Editor</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                    ) : (
-                      u.role
-                    )}
-                  </td>
-                  <td>
-                    {editingRowId === u.id
-                      ? u.status === "deleted"
-                        ? "Deleted"
-                        : u.status === "blocked"
-                        ? "Blocked"
-                        : "Active"
-                      : u.status === "deleted"
-                      ? "Deleted"
-                      : u.status === "blocked"
-                      ? "Blocked"
-                      : "Active"}
-                  </td>
-                  <td style={{ display: "flex", gap: "8px" }}>
-                    {editingRowId === u.id ? (
-                      <>
-                        <button
-                          className="icon-btn save"
-                          onClick={handleSaveClick}
-                        >
-                          <i className="pi pi-check" />
-                        </button>
-                        <button
-                          className="icon-btn cancel"
-                          onClick={handleCancelClick}
-                        >
-                          <i className="pi pi-times" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="icon-btn edit"
-                          onClick={() => handleEditClick(u)}
-                        >
-                          <i className="pi pi-pencil" />
-                        </button>
-                        <button
-                          className="icon-btn toggle"
-                          onClick={() => openConfirmDialog(u, "block")}
-                          disabled={editingRowId === u.id || u.email === currentUser?.email}
-                        >
-                          {u.status === "deleted" ? (
-                            <i className="pi pi-undo" />
-                          ) : u.status === "blocked" ? (
-                            <i className="pi pi-unlock" />
-                          ) : (
-                            <i className="pi pi-lock" />
-                          )}
-                        </button>
-                        <button
-                          className={`icon-btn delete ${
-                            u.status === "deleted" ? "disabled" : ""
-                          }`}
-                          onClick={() => {
-                            if (u.status !== "deleted")
-                              openConfirmDialog(u, "delete");
-                          }}
-                          disabled={
-                            u.status === "deleted" ||
-                            u.email === currentUser?.email
-                          }
-                        >
-                          <i className="pi pi-trash" />
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
+<tbody>
+  {loading ? (
+    <>
+      <tr>
+        <td colSpan="5" style={{ textAlign: "center", padding: "1rem" }}>
+          <div className="table-spinner"></div>
+          <p>Loading users...</p>
+        </td>
+      </tr>
+      {[...Array(5)].map((_, index) => (
+        <tr key={index}>
+          {[...Array(5)].map((_, cellIndex) => (
+            <td key={cellIndex}>
+              <div className="skeleton-loader"></div>
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  ) : users.length === 0 ? (
+    <tr>
+      <td colSpan="5" style={{ textAlign: "center" }}>
+        No users found
+      </td>
+    </tr>
+  ) : (
+    users.map((u) => (
+      <tr key={u.id}>
+        <td>
+          {editingRowId === u.id ? (
+            <div>
+              <InputText
+                value={editedUser.name}
+                onChange={(e) =>
+                  setEditedUser({ ...editedUser, name: e.target.value })
+                }
+                className={errors.name ? "p-invalid" : ""}
+              />
+              {errors.name && (
+                <small className="error-text">{errors.name}</small>
+              )}
+            </div>
+          ) : (
+            u.name
+          )}
+        </td>
+        <td>
+          {editingRowId === u.id ? (
+            <div>
+              <InputText
+                value={editedUser.email}
+                onChange={(e) =>
+                  setEditedUser({ ...editedUser, email: e.target.value })
+                }
+                className={errors.email ? "p-invalid" : ""}
+              />
+              {errors.email && (
+                <small className="error-text">{errors.email}</small>
+              )}
+            </div>
+          ) : (
+            u.email
+          )}
+        </td>
+        <td>
+          {editingRowId === u.id ? (
+            <select
+              value={editedUser.role}
+              onChange={(e) =>
+                setEditedUser({ ...editedUser, role: e.target.value })
+              }
+              className={errors.role ? "p-invalid" : ""}
+            >
+              <option value="admin">Admin</option>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          ) : (
+            u.role
+          )}
+          {editingRowId === u.id && errors.role && (
+            <small className="error-text">{errors.role}</small>
+          )}
+        </td>
+        <td>
+          {editingRowId === u.id
+            ? u.status === "deleted"
+              ? "Deleted"
+              : u.status === "blocked"
+              ? "Blocked"
+              : "Active"
+            : u.status === "deleted"
+            ? "Deleted"
+            : u.status === "blocked"
+            ? "Blocked"
+            : "Active"}
+        </td>
+        <td style={{ display: "flex", gap: "8px" }}>
+          {editingRowId === u.id ? (
+            <>
+              <Tooltip target={`.save-btn-${u.id}`} />
+              <button
+                className={`icon-btn save save-btn-${u.id}`}
+                onClick={handleSaveClick}
+                data-pr-tooltip="Save changes"
+                data-pr-position="top"
+              >
+                <i className="pi pi-check" />
+              </button>
+              <Tooltip target={`.cancel-btn-${u.id}`} />
+              <button
+                className={`icon-btn cancel cancel-btn-${u.id}`}
+                onClick={handleCancelClick}
+                data-pr-tooltip="Cancel editing"
+                data-pr-position="top"
+              >
+                <i className="pi pi-times" />
+              </button>
+            </>
+          ) : (
+            <>
+              <Tooltip target={`.edit-btn-${u.id}`} />
+              <button
+                className={`icon-btn edit edit-btn-${u.id}`}
+                onClick={() => handleEditClick(u)}
+                data-pr-tooltip="Edit user"
+                data-pr-position="top"
+              >
+                <i className="pi pi-pencil" />
+              </button>
+              <Tooltip target={`.toggle-btn-${u.id}`} />
+              <button
+                className={`icon-btn toggle toggle-btn-${u.id}`}
+                onClick={() => openConfirmDialog(u, "block")}
+                disabled={editingRowId === u.id || u.email === currentUser?.email}
+                data-pr-tooltip={
+                  u.status === "deleted"
+                    ? "Restore"
+                    : u.status === "blocked"
+                    ? "Unblock"
+                    : u.email === currentUser?.email
+                    ? "Cannot block your own account"
+                    : "Block"
+                }
+                data-pr-position="top"
+              >
+                {u.status === "deleted" ? (
+                  <i className="pi pi-undo" />
+                ) : u.status === "blocked" ? (
+                  <i className="pi pi-unlock" />
+                ) : (
+                  <i className="pi pi-lock" />
+                )}
+              </button>
+              <Tooltip target={`.delete-btn-${u.id}`} />
+              <button
+                className={`icon-btn delete delete-btn-${u.id} ${
+                  u.status === "deleted" ? "disabled" : ""
+                }`}
+                onClick={() => {
+                  if (u.status !== "deleted")
+                    openConfirmDialog(u, "delete");
+                }}
+                disabled={u.status === "deleted" || u.email === currentUser?.email}
+                data-pr-tooltip={
+                  u.status === "deleted"
+                    ? "User already deleted"
+                    : u.email === currentUser?.email
+                    ? "Cannot delete your own account"
+                    : "Delete"
+                }
+                data-pr-position="top"
+              >
+                <i className="pi pi-trash" />
+              </button>
+            </>
+          )}
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
         </table>
         {pagination.totalPages > 1 && (
           <Stack spacing={2} alignItems="center" sx={{ marginTop: "10px" }}>

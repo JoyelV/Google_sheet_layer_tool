@@ -191,7 +191,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const editVehicle = async (updatedVehicle) => {
+const editVehicle = async (updatedVehicle) => {
   try {
     const { id, ...data } = updatedVehicle;
     const res = await axios.put(`/api/vehicles/${id}`, data);
@@ -199,11 +199,15 @@ const AdminDashboard = () => {
       fetchVehicles();
       return { success: true };
     } else {
-      return { success: false, message: res.data?.message || "Failed to update vehicle." };
+      const errorMessage = res.data?.message || "Failed to update vehicle.";
+      return { success: false, message: errorMessage };
     }
   } catch (err) {
+    const errorMessage =
+      err.response?.data?.message || "Failed to update vehicle due to server error.";
     console.error("Error updating vehicle:", err.response?.data || err.message);
-    return { success: false, message: "Failed to update vehicle." };
+    toast.error(errorMessage);
+    return { success: false, message: errorMessage };
   }
 };
 
@@ -298,43 +302,124 @@ const deleteVehicle = async (id) => {
     }
   };
 
-  const addUser = async (newUser) => {
-    try {
-      const res = await axios.post("/api/users/", newUser);
-      if (res.data.success) {
-        await fetchUsers(filters);
-        return { success: true };
-      }
-      return {
-        success: false,
-        message: res.data.message || "Failed to add user",
-      };
-    } catch (err) {
-      console.error("Error adding user:", err);
-      return { success: false, message: "Server error" };
+const addUser = async (newUser) => {
+  const { name, email, role, password } = newUser;
+
+  // Client-side validation
+  if (!name?.trim()) {
+    return { success: false, message: "Name is required and cannot be empty or just spaces" };
+  }
+  if (/^\d+$/.test(name.trim())) {
+    return { success: false, message: "Name cannot be purely numeric" };
+  }
+  if (name.trim().length < 2) {
+    return { success: false, message: "Name must be at least 2 characters long" };
+  }
+  if (/[^a-zA-Z0-9\s]/.test(name.trim())) {
+    return { success: false, message: "Name cannot contain special characters" };
+  }
+  if (!email?.trim()) {
+    return { success: false, message: "Email is required and cannot be empty or just spaces" };
+  }
+  const emailRegex = /^[a-zA-Z][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+  const localPart = email.trim().split('@')[0];
+  if (!emailRegex.test(email.trim())) {
+    return { success: false, message: "Invalid email format (e.g., user@domain.com)" };
+  }
+  if (email.trim().endsWith("@gmail")) {
+    return { success: false, message: "Email must include a valid top-level domain (e.g., .com)" };
+  }
+  if (/^\d+$/.test(localPart)) {
+    return { success: false, message: "Email local part (before @) cannot be purely numeric" };
+  }
+  if (!role?.trim() || !["admin", "editor", "viewer"].includes(role)) {
+    return { success: false, message: "Role must be admin, editor, or viewer" };
+  }
+  if (!password?.trim()) {
+    return { success: false, message: "Password is required and cannot be empty or just spaces" };
+  }
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  if (password.length < minLength) {
+    return { success: false, message: "Password must be at least 8 characters long" };
+  }
+  if (!hasUpperCase) {
+    return { success: false, message: "Password must contain at least one uppercase letter" };
+  }
+  if (!hasLowerCase) {
+    return { success: false, message: "Password must contain at least one lowercase letter" };
+  }
+  if (!hasNumber) {
+    return { success: false, message: "Password must contain at least one number" };
+  }
+  if (!hasSpecialChar) {
+    return { success: false, message: "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)" };
+  }
+
+  try {
+    const res = await axios.post("/api/users/", newUser);
+    if (res.data.success) {
+      await fetchUsers(filters);
+      return { success: true, message: "User added successfully" };
     }
-  };
+    return {
+      success: false,
+      message: res.data.message || "Failed to add user",
+    };
+  } catch (err) {
+    console.error("Error adding user:", err.response?.data || err.message);
+    return { success: false, message: err.response?.data?.message || "Server error" };
+  }
+};
 
 const editUser = async (user) => {
   const { id, name, email, role } = user;
-  if (!name || !email || !role) {
-    toast.error("Missing fields");
-    return { success: false, message: "Missing fields" };
+
+  // Client-side validation
+  if (!name?.trim()) {
+    return { success: false, message: "Name is required and incomplete or just spaces" };
   }
+  if (/^\d+$/.test(name.trim())) {
+    return { success: false, message: "Name cannot be purely numeric" };
+  }
+  if (name.trim().length < 2) {
+    return { success: false, message: "Name must be at least 2 characters long" };
+  }
+  if (/[^a-zA-Z0-9\s]/.test(name.trim())) {
+    return { success: false, message: "Name cannot contain special characters" };
+  }
+  if (!email?.trim()) {
+    return { success: false, message: "Email is required and cannot be empty or just spaces" };
+  }
+  const emailRegex = /^[a-zA-Z][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+  const localPart = email.trim().split('@')[0];
+  if (!emailRegex.test(email.trim())) {
+    return { success: false, message: "Invalid email format (e.g., user@domain.com)" };
+  }
+  if (email.trim().endsWith("@gmail")) {
+    return { success: false, message: "Email must include a valid top-level domain (e.g., .com)" };
+  }
+  if (/^\d+$/.test(localPart)) {
+    return { success: false, message: "Email local part (before @) cannot be purely numeric" };
+  }
+  if (!role?.trim() || !["admin", "editor", "viewer"].includes(role)) {
+    return { success: false, message: "Role must be admin, editor, or viewer" };
+  }
+
   try {
     const res = await axios.put(`/api/users/${id}`, { name, email, role });
     if (res.data.success) {
       await fetchUsers(filters);
-      //toast.success("User updated successfully!");
       return { success: true, message: "User updated successfully" };
     } else {
-      toast.error(res.data.message || "Failed to update user");
       return { success: false, message: res.data.message || "Failed to update user" };
     }
   } catch (err) {
-    console.error("Error updating user:", err);
-    toast.error("Server error. Try again later.");
-    return { success: false, message: "Server error. Try again later." };
+    console.error("Error updating user:", err.response?.data || err.message);
+    return { success: false, message: err.response?.data?.message || "Server error. Try again later." };
   }
 };
 
