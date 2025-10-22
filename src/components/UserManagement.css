@@ -185,6 +185,20 @@ tbody tr:hover {
   box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
+/* Tooltip styles */
+.p-tooltip .p-tooltip-text {
+  background-color: #333;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.p-tooltip-arrow {
+  border-bottom-color: #333;
+}
+
 .p-dialog-header {
   font-weight: 700;
   font-size: 1.2rem;

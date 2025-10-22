@@ -3,9 +3,9 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { AutoComplete } from "primereact/autocomplete";
+import { Tooltip } from "primereact/tooltip";
 import { toast } from "react-toastify";
 import { confirmDialog } from "primereact/confirmdialog";
-
 import "./VehicleManagement.css";
 
 const debounce = (func, wait) => {
@@ -641,103 +641,108 @@ const VehicleManagement = ({
             </tr>
           </thead>
           <tbody>
-            {vehicleLoading ? (
-              <tr>
-                <td colSpan={isViewer ? 13 : 14}>
-                  <div className="loading-container">
-                    <div className="spinner"></div>
-                    <p>Loading vehicle data...</p>
-                    {[...Array(5)].map((_, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: "flex",
-                          gap: "10px",
-                          width: "100%",
-                          margin: "8px 0",
-                        }}
-                      >
-                        {[...Array(isViewer ? 13 : 14)].map((_, cellIndex) => (
-                          <div
-                            key={cellIndex}
-                            className="skeleton-loader"
-                            style={{
-                              height: "30px",
-                              width: "100%",
-                              maxWidth: "100px",
-                            }}
-                          ></div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ) : vehicleData?.length > 0 ? (
-              vehicleData.map((v) => (
-                <tr key={v.id}>
-                  <td>{v.auctionDate}</td>
-                  <td>{v.vehicleYear}</td>
-                  <td>{v.make}</td>
-                  <td>{v.series}</td>
-                  <td>{v.modelNumber}</td>
-                  <td>{v.engine}</td>
-                  <td>{v.odometer}</td>
-                  <td>{v.color}</td>
-                  <td>{v.auctionLocation}</td>
-                  <td>{v.crValue}</td>
-                  <td>{v.auctionSalePrice}</td>
-                  <td>{v.jdWholesaleValue}</td>
-                  <td>{v.jdRetailValue}</td>
-                  {!isViewer && (
-                    <td style={{ display: "flex", gap: "10px" }}>
-                      <button
-                        className="icon-btn edit"
-                        onClick={() => {
-                          setEditData(v);
-                          setShowEditModal(true);
-                        }}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className="icon-btn delete"
-                        onClick={() => {
-                          confirmDialog({
-                            message:
-                              "Are you sure you want to delete this vehicle?",
-                            header: "Confirm Deletion",
-                            icon: "pi pi-exclamation-triangle",
-                            acceptClassName: "p-button-danger",
-                            acceptLabel: "Yes, Delete",
-                            rejectLabel: "Cancel",
-                            accept: () => deleteVehicle(v.id),
-                          });
-                        }}
-                      >
-                        🗑️
-                      </button>
-                      <button
-                        className="icon-btn history"
-                        onClick={() => handleRowHistory(v.id)}
-                      >
-                        🕒
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={isViewer ? 13 : 14}
-                  style={{ textAlign: "center" }}
-                >
-                  No vehicle data found
-                </td>
-              </tr>
-            )}
-          </tbody>
+  {vehicleLoading ? (
+    <tr>
+      <td colSpan={isViewer ? 13 : 14}>
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading vehicle data...</p>
+          {[...Array(5)].map((_, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                gap: "10px",
+                width: "100%",
+                margin: "8px 0",
+              }}
+            >
+              {[...Array(isViewer ? 13 : 14)].map((_, cellIndex) => (
+                <div
+                  key={cellIndex}
+                  className="skeleton-loader"
+                  style={{
+                    height: "30px",
+                    width: "100%",
+                    maxWidth: "100px",
+                  }}
+                ></div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </td>
+    </tr>
+  ) : vehicleData?.length > 0 ? (
+    vehicleData.map((v) => (
+      <tr key={v.id}>
+        <td>{v.auctionDate}</td>
+        <td>{v.vehicleYear}</td>
+        <td>{v.make}</td>
+        <td>{v.series}</td>
+        <td>{v.modelNumber}</td>
+        <td>{v.engine}</td>
+        <td>{v.odometer}</td>
+        <td>{v.color}</td>
+        <td>{v.auctionLocation}</td>
+        <td>{v.crValue}</td>
+        <td>{v.auctionSalePrice}</td>
+        <td>{v.jdWholesaleValue}</td>
+        <td>{v.jdRetailValue}</td>
+        {!isViewer && (
+          <td style={{ display: "flex", gap: "10px" }}>
+            <Tooltip target={`.edit-btn-${v.id}`} />
+            <button
+              className={`icon-btn edit edit-btn-${v.id}`}
+              onClick={() => {
+                setEditData(v);
+                setShowEditModal(true);
+              }}
+              data-pr-tooltip="Edit vehicle"
+              data-pr-position="top"
+            >
+              ✏️
+            </button>
+            <Tooltip target={`.delete-btn-${v.id}`} />
+            <button
+              className={`icon-btn delete delete-btn-${v.id}`}
+              onClick={() => {
+                confirmDialog({
+                  message: "Are you sure you want to delete this vehicle?",
+                  header: "Confirm Deletion",
+                  icon: "pi pi-exclamation-triangle",
+                  acceptClassName: "p-button-danger",
+                  acceptLabel: "Yes, Delete",
+                  rejectLabel: "Cancel",
+                  accept: () => deleteVehicle(v.id),
+                });
+              }}
+              data-pr-tooltip="Delete vehicle"
+              data-pr-position="top"
+            >
+              🗑️
+            </button>
+            <Tooltip target={`.history-btn-${v.id}`} />
+            <button
+              className={`icon-btn history history-btn-${v.id}`}
+              onClick={() => handleRowHistory(v.id)}
+              data-pr-tooltip="View row history"
+              data-pr-position="top"
+            >
+              🕒
+            </button>
+          </td>
+        )}
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
+        No vehicle data found
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
         {vehiclePagination ? (
           <div className="pagination-container">

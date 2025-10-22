@@ -482,6 +482,65 @@ tbody tr:hover {
   backdrop-filter: none !important;
 }
 
+/* Existing styles (ensure these are present or add them) */
+.skeleton-loader {
+  animation: pulse 1.5s infinite;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  height: 30px;
+  width: 100%;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #2563eb;
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 1rem auto;
+  display: block;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Tooltip styles (added for consistency with UserManagement.css) */
+.p-tooltip .p-tooltip-text {
+  background-color: #333;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.p-tooltip-arrow {
+  border-bottom-color: #333;
+}
+
+/* Optional: Style for disabled buttons to make tooltips clear */
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .p-confirm-dialog .p-button {
