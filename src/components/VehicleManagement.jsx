@@ -127,14 +127,13 @@ const VehicleManagement = ({
   const isNonEmptyText = (val) =>
     typeof val === "string" && val.trim().length > 0;
   const isNotNumeric = (val) =>
-    typeof val === "string" && !/^\d+$/.test(val.trim()); // Check if value is not purely numeric
+    typeof val === "string" && !/^\d+$/.test(val.trim());
   const hasNoInvalidChars = (val) =>
-    typeof val === "string" && !/[^\w\s]/.test(val.trim()); // Disallow special characters except spaces and alphanumeric
+    typeof val === "string" && !/[^\w\s]/.test(val.trim()); 
 
   const isValidColorText = (val) =>
   typeof val === "string" &&
-  /^[a-zA-Z\s]+$/.test(val.trim()) && // only letters and spaces
-  val.trim().length > 0;
+  /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
 
   // Validate auctionDate
   if (!isNonEmptyText(data.auctionDate)) {
@@ -809,47 +808,54 @@ const VehicleManagement = ({
       {!isViewer && (
         <>
           <Dialog
-            header="Add New Vehicle"
-            visible={showAddModal}
-            style={{ width: "40vw" }}
-            onHide={() => setShowAddModal(false)}
-          >
-            <div className="add-user-form">
-              {Object.keys(form).map((key) => (
-                <div className="form-group" key={key}>
-                  <label>{key}</label>
-                  <InputText
-                    type={
-                      key.includes("Date")
-                        ? "date"
-                        : key.match(/Price|Value|odometer|Year/)
-                        ? "number"
-                        : "text"
-                    }
-                    value={form[key]}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (
-                        key.match(/Price|Value|odometer|Year/) &&
-                        Number(val) < 0
-                      )
-                        return;
-                      setForm({ ...form, [key]: val });
-                    }}
-                    min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
-                  />
-                  {formErrors[key] && (
-                    <small style={{ color: "red" }}>{formErrors[key]}</small>
-                  )}
-                </div>
-              ))}
-              <Button
-                label="Save"
-                className="btn save"
-                onClick={handleAddSubmit}
-              />
-            </div>
-          </Dialog>
+  header="Add New Vehicle"
+  visible={showAddModal}
+  style={{ width: "40vw" }}
+  onHide={() => setShowAddModal(false)}
+>
+  <div className="add-user-form">
+    {Object.keys(form).map((key) => (
+      <div className="form-group" key={key}>
+        <label style={{ fontWeight: "600", textTransform: "capitalize" }}>
+          {key
+            .replace(/([A-Z])/g, " $1") // Add space before capital letters
+            .trim() // Remove leading/trailing spaces
+            .split(" ") // Split into words
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
+            .join(" ")} {/* Join words back with spaces */}
+        </label>
+        <InputText
+          type={
+            key.includes("Date")
+              ? "date"
+              : key.match(/Price|Value|odometer|Year/)
+              ? "number"
+              : "text"
+          }
+          value={form[key]}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (
+              key.match(/Price|Value|odometer|Year/) &&
+              Number(val) < 0
+            )
+              return;
+            setForm({ ...form, [key]: val });
+          }}
+          min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+        />
+        {formErrors[key] && (
+          <small style={{ color: "red" }}>{formErrors[key]}</small>
+        )}
+      </div>
+    ))}
+    <Button
+      label="Save"
+      className="btn save"
+      onClick={handleAddSubmit}
+    />
+  </div>
+</Dialog>
           <Dialog
             header="✏️ Edit Vehicle Details"
             visible={showEditModal}
