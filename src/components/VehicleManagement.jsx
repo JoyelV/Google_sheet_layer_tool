@@ -6,6 +6,7 @@ import { AutoComplete } from "primereact/autocomplete";
 import { Tooltip } from "primereact/tooltip";
 import { toast } from "react-toastify";
 import { confirmDialog } from "primereact/confirmdialog";
+import { Calendar } from "primereact/calendar";
 import "./VehicleManagement.css";
 
 const debounce = (func, wait) => {
@@ -116,9 +117,10 @@ const VehicleManagement = ({
     "jdRetailValue",
   ];
 
-  const validateForm = (data) => {
+const validateForm = (data) => {
   const errors = {};
   const isValidDate = (dateString) => {
+    if (!dateString) return false;
     const date = new Date(dateString);
     return !isNaN(date.getTime());
   };
@@ -129,11 +131,10 @@ const VehicleManagement = ({
   const isNotNumeric = (val) =>
     typeof val === "string" && !/^\d+$/.test(val.trim());
   const hasNoInvalidChars = (val) =>
-    typeof val === "string" && !/[^\w\s]/.test(val.trim()); 
-
+    typeof val === "string" && !/[^\w\s]/.test(val.trim());
   const isValidColorText = (val) =>
-  typeof val === "string" &&
-  /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
+    typeof val === "string" &&
+    /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
 
   // Validate auctionDate
   if (!isNonEmptyText(data.auctionDate)) {
@@ -818,32 +819,50 @@ const VehicleManagement = ({
       <div className="form-group" key={key}>
         <label style={{ fontWeight: "600", textTransform: "capitalize" }}>
           {key
-            .replace(/([A-Z])/g, " $1") // Add space before capital letters
-            .trim() // Remove leading/trailing spaces
-            .split(" ") // Split into words
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
-            .join(" ")} {/* Join words back with spaces */}
+            .replace(/([A-Z])/g, " $1")
+            .trim()
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")}
         </label>
-        <InputText
-          type={
-            key.includes("Date")
-              ? "date"
-              : key.match(/Price|Value|odometer|Year/)
-              ? "number"
-              : "text"
-          }
-          value={form[key]}
-          onChange={(e) => {
-            const val = e.target.value;
-            if (
-              key.match(/Price|Value|odometer|Year/) &&
-              Number(val) < 0
-            )
-              return;
-            setForm({ ...form, [key]: val });
-          }}
-          min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
-        />
+        {key === "auctionDate" ? (
+          <Calendar
+  value={form[key] ? new Date(form[key]) : null}
+  onChange={(e) => {
+    const date = e.value;
+    setForm({
+      ...form,
+      [key]: date ? date.toISOString().split("T")[0] : "",
+    });
+  }}
+  dateFormat="yy-mm-dd"
+  showIcon
+  icon="pi pi-calendar" // Use PrimeReact's calendar icon
+  inputClassName="p-inputtext"
+  style={{ width: "100%" }}
+/>
+        ) : (
+          <InputText
+            type={
+              key.includes("Date")
+                ? "date"
+                : key.match(/Price|Value|odometer|Year/)
+                ? "number"
+                : "text"
+            }
+            value={form[key]}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (
+                key.match(/Price|Value|odometer|Year/) &&
+                Number(val) < 0
+              )
+                return;
+              setForm({ ...form, [key]: val });
+            }}
+            min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+          />
+        )}
         {formErrors[key] && (
           <small style={{ color: "red" }}>{formErrors[key]}</small>
         )}
@@ -857,91 +876,113 @@ const VehicleManagement = ({
   </div>
 </Dialog>
           <Dialog
-            header="✏️ Edit Vehicle Details"
-            visible={showEditModal}
-            style={{ width: "45vw", maxWidth: "700px" }}
-            onHide={() => setShowEditModal(false)}
+  header="✏️ Edit Vehicle Details"
+  visible={showEditModal}
+  style={{ width: "45vw", maxWidth: "700px" }}
+  onHide={() => setShowEditModal(false)}
+>
+  {editData && (
+    <div
+      className="edit-vehicle-form"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "1rem",
+        padding: "10px 0",
+      }}
+    >
+      {editableFields.map((key) => (
+        <div
+          key={key}
+          style={{ display: "flex", flexDirection: "column" }}
+        >
+          <label
+            style={{
+              fontWeight: "600",
+              textTransform: "capitalize",
+              marginBottom: "4px",
+            }}
           >
-            {editData && (
-              <div
-                className="edit-vehicle-form"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "1rem",
-                  padding: "10px 0",
-                }}
-              >
-                {editableFields.map((key) => (
-                  <div
-                    key={key}
-                    style={{ display: "flex", flexDirection: "column" }}
-                  >
-                    <label
-                      style={{
-                        fontWeight: "600",
-                        textTransform: "capitalize",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      {key.replace(/([A-Z])/g, " $1")}
-                    </label>
-                    <InputText
-                      type={
-                        key.includes("Date")
-                          ? "date"
-                          : key.match(/Price|Value|odometer|Year/)
-                          ? "number"
-                          : "text"
-                      }
-                      value={editData[key] || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (
-                          key.match(/Price|Value|odometer|Year/) &&
-                          Number(val) < 0
-                        )
-                          return;
-                        setEditData({ ...editData, [key]: val });
-                      }}
-                      min={
-                        key.match(/Price|Value|odometer|Year/) ? 0 : undefined
-                      }
-                      style={{
-                        padding: "8px",
-                        borderRadius: "6px",
-                        border: "1px solid #ccc",
-                      }}
-                    />
-                    {formErrors[key] && (
-                      <small style={{ color: "red", marginTop: "4px" }}>
-                        {formErrors[key]}
-                      </small>
-                    )}
-                  </div>
-                ))}
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    textAlign: "right",
-                    marginTop: "1.5rem",
-                  }}
-                >
-                  <Button
-                    label="Update Vehicle"
-                    icon="pi pi-check"
-                    className="p-button-success"
-                    onClick={handleEditSubmit}
-                    style={{
-                      padding: "8px 20px",
-                      fontWeight: "600",
-                      borderRadius: "8px",
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </Dialog>
+            {key.replace(/([A-Z])/g, " $1")}
+          </label>
+          {key === "auctionDate" ? (
+            <Calendar
+              value={editData[key] ? new Date(editData[key]) : null}
+              onChange={(e) => {
+                const date = e.value;
+                setEditData({
+                  ...editData,
+                  [key]: date ? date.toISOString().split("T")[0] : "",
+                });
+              }}
+              dateFormat="yy-mm-dd"
+              showIcon
+              inputClassName="p-inputtext"
+              style={{
+                padding: "8px",
+                borderRadius: "6px",
+                border: "1px solid #ccc",
+                width: "100%",
+              }}
+            />
+          ) : (
+            <InputText
+              type={
+                key.includes("Date")
+                  ? "date"
+                  : key.match(/Price|Value|odometer|Year/)
+                  ? "number"
+                  : "text"
+              }
+              value={editData[key] || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (
+                  key.match(/Price|Value|odometer|Year/) &&
+                  Number(val) < 0
+                )
+                  return;
+                setEditData({ ...editData, [key]: val });
+              }}
+              min={
+                key.match(/Price|Value|odometer|Year/) ? 0 : undefined
+              }
+              style={{
+                padding: "8px",
+                borderRadius: "6px",
+                border: "1px solid #ccc",
+              }}
+            />
+          )}
+          {formErrors[key] && (
+            <small style={{ color: "red", marginTop: "4px" }}>
+              {formErrors[key]}
+            </small>
+          )}
+        </div>
+      ))}
+      <div
+        style={{
+          gridColumn: "1 / -1",
+          textAlign: "right",
+          marginTop: "1.5rem",
+        }}
+      >
+        <Button
+          label="Update Vehicle"
+          icon="pi pi-check"
+          className="p-button-success"
+          onClick={handleEditSubmit}
+          style={{
+            padding: "8px 20px",
+            fontWeight: "600",
+            borderRadius: "8px",
+          }}
+        />
+      </div>
+    </div>
+  )}
+</Dialog>
           <Dialog
             header="📋 Bulk Insertions"
             visible={showListModal}

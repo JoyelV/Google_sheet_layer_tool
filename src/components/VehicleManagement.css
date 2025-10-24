@@ -148,7 +148,7 @@ tbody tr:hover {
   border-left: 1px solid #ccc;
   background-color: #f4f3f3;
   padding: clamp(6px, 1.5vw, 8px);
-  color:#6b7280;
+  color: #6b7280;
 }
 
 .filter-bar .p-autocomplete-panel {
@@ -512,15 +512,6 @@ tbody tr:hover {
   display: block;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
 /* Tooltip styles (added for consistency with UserManagement.css) */
 .p-tooltip .p-tooltip-text {
   background-color: #333;
@@ -541,26 +532,254 @@ tbody tr:hover {
   cursor: not-allowed;
 }
 
-/* Responsive Adjustments */
+/* Calendar Component Styling */
+.p-calendar {
+  width: 100%;
+}
+
+.p-calendar .p-inputtext {
+  padding: clamp(8px, 1.8vw, 10px);
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  width: 900%;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.p-calendar .p-inputtext:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.p-calendar .p-calendar-button {
+  padding: clamp(8px, 1.8vw, 10px);
+  border-left: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  color: #374151;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.p-calendar .p-calendar-button:hover {
+  background-color: #e5e7eb;
+}
+
+.p-calendar .p-calendar-button .p-icon {
+  width: clamp(16px, 3.5vw, 18px);
+  height: clamp(16px, 3.5vw, 18px);
+}
+
+/* Calendar Popup Styling */
+.p-calendar .p-datepicker {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: clamp(10px, 2vw, 12px);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header (Month/Year Navigation) */
+.p-datepicker .p-datepicker-header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: clamp(8px, 1.5vw, 10px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 6px 6px 0 0;
+}
+
+/* Navigation Arrows */
+.p-datepicker .p-datepicker-prev,
+.p-datepicker .p-datepicker-next {
+  width: clamp(28px, 6vw, 32px);
+  height: clamp(28px, 6vw, 32px);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.p-datepicker .p-datepicker-prev:hover,
+.p-datepicker .p-datepicker-next:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.p-datepicker .p-datepicker-prev .p-icon,
+.p-datepicker .p-datepicker-next .p-icon {
+  width: clamp(14px, 3vw, 16px);
+  height: clamp(14px, 3vw, 16px);
+}
+
+/* Month and Year Selectors */
+.p-datepicker .p-monthpicker-month,
+.p-datepicker .p-yearpicker-year {
+  padding: clamp(6px, 1.5vw, 8px);
+  border-radius: 4px;
+  color: #374151;
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.p-datepicker .p-monthpicker-month:hover,
+.p-datepicker .p-yearpicker-year:hover {
+  background: #e5e7eb;
+}
+
+.p-datepicker .p-monthpicker-month.p-highlight,
+.p-datepicker .p-yearpicker-year.p-highlight {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* Month/Year Dropdown Trigger */
+.p-datepicker .p-datepicker-title {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.5vw, 8px);
+}
+
+.p-datepicker .p-datepicker-title select {
+  appearance: none;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: clamp(4px, 1vw, 6px);
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.p-datepicker .p-datepicker-title select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Date Cells */
+.p-datepicker table td > span {
+  width: clamp(28px, 6vw, 32px);
+  height: clamp(28px, 6vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.p-datepicker table td > span:hover {
+  background: #e5e7eb;
+}
+
+.p-datepicker table td > span.p-highlight {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.p-datepicker table td > span.p-disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Day Names */
+.p-datepicker table th {
+  font-size: clamp(0.75rem, 2vw, 0.85rem);
+  color: #6b7280;
+  padding: clamp(4px, 1vw, 6px);
+  text-align: center;
+}
+
+/* Responsive Adjustments for Calendar */
 @media (max-width: 768px) {
-  .p-confirm-dialog .p-button {
-    font-size: 0.9rem;
-    padding: 0.5rem;
-    width: 100%;
+  .p-calendar .p-inputtext {
+    font-size: clamp(0.75rem, 2vw, 0.85rem);
+    padding: clamp(6px, 1.5vw, 8px);
+  }
+
+  .p-calendar .p-calendar-button {
+    padding: clamp(6px, 1.5vw, 8px);
+  }
+
+  .p-calendar .p-icon {
+    width: clamp(14px, 3vw, 16px);
+    height: clamp(14px, 3vw, 16px);
+  }
+
+  .p-datepicker {
+    padding: clamp(8px, 1.5vw, 10px);
+  }
+
+  .p-datepicker .p-datepicker-prev,
+  .p-datepicker .p-datepicker-next {
+    width: clamp(24px, 5vw, 28px);
+    height: clamp(24px, 5vw, 28px);
+  }
+
+  .p-datepicker table td > span {
+    width: clamp(24px, 5vw, 28px);
+    height: clamp(24px, 5vw, 28px);
+    font-size: clamp(0.75rem, 2vw, 0.85rem);
   }
 }
 
 @media (max-width: 480px) {
-  .p-confirm-dialog {
-    max-width: 280px;
+  .p-calendar .p-inputtext {
+    font-size: clamp(0.7rem, 2vw, 0.8rem);
+    padding: clamp(5px, 1.2vw, 6px);
   }
-  .p-confirm-dialog .p-button {
-    font-size: 0.85rem;
-    padding: 0.4rem;
+
+  .p-calendar .p-calendar-button {
+    padding: clamp(5px, 1.2vw, 6px);
+  }
+
+  .p-calendar .p-icon {
+    width: clamp(12px, 2.5vw, 14px);
+    height: clamp(12px, 2.5vw, 14px);
+  }
+
+  .p-datepicker {
+    padding: clamp(6px, 1.2vw, 8px);
+  }
+
+  .p-datepicker .p-datepicker-prev,
+  .p-datepicker .p-datepicker-next {
+    width: clamp(20px, 4.5vw, 24px);
+    height: clamp(20px, 4.5vw, 24px);
+  }
+
+  .p-datepicker table td > span {
+    width: clamp(20px, 4.5vw, 24px);
+    height: clamp(20px, 4.5vw, 24px);
+    font-size: clamp(0.7rem, 2vw, 0.8rem);
+  }
+
+  .p-datepicker .p-monthpicker-month,
+  .p-datepicker .p-yearpicker-year {
+    font-size: clamp(0.7rem, 2vw, 0.8rem);
+    padding: clamp(4px, 1vw, 6px);
   }
 }
 
-/* Responsive Design */
+/* Responsive Adjustments */
 @media (max-width: 1024px) {
   .content-section {
     padding: clamp(0.5rem, 2vw, 0.75rem);
