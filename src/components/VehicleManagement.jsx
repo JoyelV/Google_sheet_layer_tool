@@ -141,91 +141,101 @@ const VehicleManagement = ({
       .join(" ");
   };
 
-  const validateForm = (data) => {
-    const errors = {};
-    const isValidDate = (dateString) => {
-      if (!dateString) return false;
-      const date = new Date(dateString);
-      return !isNaN(date.getTime());
-    };
-    const isPositiveNumber = (val) =>
-      val !== "" && !isNaN(val) && Number(val) >= 0;
-    const isNonEmptyText = (val) =>
-      typeof val === "string" && val.trim().length > 0;
-    const isNotNumeric = (val) =>
-      typeof val === "string" && !/^\d+$/.test(val.trim());
-    const hasNoInvalidChars = (val) =>
-      typeof val === "string" && !/[^\w\s]/.test(val.trim());
-    const isValidColorText = (val) =>
-      typeof val === "string" &&
-      /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
-
-    // Validate auctionDate
-    if (!isNonEmptyText(data.auctionDate)) {
-      errors.auctionDate = "Auction date is required";
-    } else if (!isValidDate(data.auctionDate)) {
-      errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
-    }
-
-    // Validate vehicleYear
-    if (!data.vehicleYear) {
-      errors.vehicleYear = "Vehicle year is required";
-    } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
-      errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
-    }
-
-    // Validate text fields (excluding optional fields)
-    ["make", "series", "modelNumber", "auctionLocation"].forEach((field) => {
-      if (!isNonEmptyText(data[field])) {
-        errors[field] = `${field} is required and cannot be empty or just spaces`;
-      } else if (!isNotNumeric(data[field])) {
-        errors[field] = `${field} cannot be purely numeric`;
-      } else if (!hasNoInvalidChars(data[field])) {
-        errors[field] = `${field} cannot contain special characters`;
-      }
-    });
-
-    // Validate color only if provided
-    if (data.color !== "" && !isValidColorText(data.color)) {
-      errors.color = "Color should only contain alphabets and spaces (e.g., 'Sky Blue')";
-    }
-
-    // Validate numeric fields (excluding optional fields)
-    ["auctionSalePrice"].forEach((field) => {
-      if (data[field] !== "" && !isPositiveNumber(data[field])) {
-        errors[field] = `${field} must be a valid number ≥ 0`;
-      }
-    });
-
-    // Optional fields (Model, Engine, Odometer, CR, JD Wholesale, JD Retail) - no validation if empty
-    if (data.engine !== "" && !isNonEmptyText(data.engine)) {
-      errors.engine = "Engine cannot be empty or just spaces if provided";
-    } else if (data.engine && !isNotNumeric(data.engine)) {
-      errors.engine = "Engine cannot be purely numeric";
-    } else if (data.engine && !hasNoInvalidChars(data.engine)) {
-      errors.engine = "Engine cannot contain special characters";
-    }
-
-    if (data.odometer !== "" && !isPositiveNumber(data.odometer)) {
-      errors.odometer = "Odometer must be a valid number ≥ 0";
-    }
-
-    if (data.crValue !== "" && !isNonEmptyText(data.crValue)) {
-      errors.crValue = "CR Value cannot be empty or just spaces if provided";
-    } else if (data.crValue && !hasNoInvalidChars(data.crValue)) {
-      errors.crValue = "CR Value cannot contain special characters";
-    }
-
-    if (data.jdWholesaleValue !== "" && !isPositiveNumber(data.jdWholesaleValue)) {
-      errors.jdWholesaleValue = "JD Wholesale Value must be a valid number ≥ 0";
-    }
-
-    if (data.jdRetailValue !== "" && !isPositiveNumber(data.jdRetailValue)) {
-      errors.jdRetailValue = "JD Retail Value must be a valid number ≥ 0";
-    }
-
-    return errors;
+const validateForm = (data) => {
+  const errors = {};
+  const isValidDate = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
   };
+  const isPositiveNumber = (val) =>
+    val !== "" && !isNaN(val) && Number(val) >= 0;
+  const isNonEmptyText = (val) =>
+    typeof val === "string" && val.trim().length > 0;
+  const isNotNumeric = (val) =>
+    typeof val === "string" && !/^\d+$/.test(val.trim());
+  const hasNoInvalidChars = (val) =>
+    typeof val === "string" && !/[^\w\s]/.test(val.trim());
+  const isValidColorText = (val) =>
+    typeof val === "string" &&
+    /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
+
+  // Validate auctionDate
+  if (!isNonEmptyText(data.auctionDate)) {
+    errors.auctionDate = "Auction date is required";
+  } else if (!isValidDate(data.auctionDate)) {
+    errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
+  }
+
+  // Validate vehicleYear
+  if (!data.vehicleYear) {
+    errors.vehicleYear = "Vehicle year is required";
+  } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
+    errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
+  }
+
+  // Validate required text fields
+  ["make", "series", "auctionLocation"].forEach((field) => {
+    if (!isNonEmptyText(data[field])) {
+      errors[field] = `${getProperLabel(field)} is required and cannot be empty or just spaces`;
+    } else if (!isNotNumeric(data[field])) {
+      errors[field] = `${getProperLabel(field)} cannot be purely numeric`;
+    } else if (!hasNoInvalidChars(data[field])) {
+      errors[field] = `${getProperLabel(field)} cannot contain special characters`;
+    }
+  });
+
+  // Validate crValue as required with no special characters (allowing numeric)
+  if (!isNonEmptyText(data.crValue)) {
+    errors.crValue = `${getProperLabel("crValue")} is required and cannot be empty or just spaces`;
+  } else if (!hasNoInvalidChars(data.crValue)) {
+    errors.crValue = `${getProperLabel("crValue")} cannot contain special characters`;
+  }
+
+  // Validate required numeric fields
+  ["auctionSalePrice"].forEach((field) => {
+    if (!isNonEmptyText(data[field])) {
+      errors[field] = `${getProperLabel(field)} is required and cannot be empty or just spaces`;
+    } else if (!isPositiveNumber(data[field])) {
+      errors[field] = `${getProperLabel(field)} must be a valid number ≥ 0`;
+    }
+  });
+
+  // Optional fields - validation only if provided
+  if (data.modelNumber !== "" && !isNonEmptyText(data.modelNumber)) {
+    errors.modelNumber = "Model # cannot be empty or just spaces if provided";
+  } else if (data.modelNumber && !isNotNumeric(data.modelNumber)) {
+    errors.modelNumber = "Model # cannot be purely numeric";
+  } else if (data.modelNumber && !hasNoInvalidChars(data.modelNumber)) {
+    errors.modelNumber = "Model # cannot contain special characters";
+  }
+
+  if (data.engine !== "" && !isNonEmptyText(data.engine)) {
+    errors.engine = "Engine cannot be empty or just spaces if provided";
+  } else if (data.engine && !isNotNumeric(data.engine)) {
+    errors.engine = "Engine cannot be purely numeric";
+  } else if (data.engine && !hasNoInvalidChars(data.engine)) {
+    errors.engine = "Engine cannot contain special characters";
+  }
+
+  if (data.odometer !== "" && !isPositiveNumber(data.odometer)) {
+    errors.odometer = "Odometer must be a valid number ≥ 0";
+  }
+
+  if (data.color !== "" && !isValidColorText(data.color)) {
+    errors.color = "Color should only contain alphabets and spaces (e.g., 'Sky Blue')";
+  }
+
+  if (data.jdWholesaleValue !== "" && !isPositiveNumber(data.jdWholesaleValue)) {
+    errors.jdWholesaleValue = "JD Wholesale Value must be a valid number ≥ 0";
+  }
+
+  if (data.jdRetailValue !== "" && !isPositiveNumber(data.jdRetailValue)) {
+    errors.jdRetailValue = "JD Retail Value must be a valid number ≥ 0";
+  }
+
+  return errors;
+};
 
   const [form, setForm] = useState({
     auctionDate: "",
