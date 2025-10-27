@@ -117,78 +117,115 @@ const VehicleManagement = ({
     "jdRetailValue",
   ];
 
-const validateForm = (data) => {
-  const errors = {};
-  const isValidDate = (dateString) => {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    return !isNaN(date.getTime());
+  const getProperLabel = (key) => {
+    const labelMap = {
+      auctionDate: "Auction Date",
+      vehicleYear: "Year",
+      make: "Make",
+      series: "Series",
+      modelNumber: "Model #",
+      engine: "Engine",
+      odometer: "Odometer",
+      color: "Color",
+      auctionLocation: "Location",
+      crValue: "CR Value",
+      auctionSalePrice: "Sale Price",
+      jdWholesaleValue: "JD Wholesale Value",
+      jdRetailValue: "JD Retail Value",
+    };
+    return labelMap[key] || key
+      .replace(/([A-Z])/g, " $1")
+      .trim()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
-  const isPositiveNumber = (val) =>
-    val !== "" && !isNaN(val) && Number(val) >= 0;
-  const isNonEmptyText = (val) =>
-    typeof val === "string" && val.trim().length > 0;
-  const isNotNumeric = (val) =>
-    typeof val === "string" && !/^\d+$/.test(val.trim());
-  const hasNoInvalidChars = (val) =>
-    typeof val === "string" && !/[^\w\s]/.test(val.trim());
-  const isValidColorText = (val) =>
-    typeof val === "string" &&
-    /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
 
-  // Validate auctionDate
-  if (!isNonEmptyText(data.auctionDate)) {
-    errors.auctionDate = "Auction date is required";
-  } else if (!isValidDate(data.auctionDate)) {
-    errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
-  }
+  const validateForm = (data) => {
+    const errors = {};
+    const isValidDate = (dateString) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      return !isNaN(date.getTime());
+    };
+    const isPositiveNumber = (val) =>
+      val !== "" && !isNaN(val) && Number(val) >= 0;
+    const isNonEmptyText = (val) =>
+      typeof val === "string" && val.trim().length > 0;
+    const isNotNumeric = (val) =>
+      typeof val === "string" && !/^\d+$/.test(val.trim());
+    const hasNoInvalidChars = (val) =>
+      typeof val === "string" && !/[^\w\s]/.test(val.trim());
+    const isValidColorText = (val) =>
+      typeof val === "string" &&
+      /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
 
-  // Validate vehicleYear
-  if (!data.vehicleYear) {
-    errors.vehicleYear = "Vehicle year is required";
-  } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
-    errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
-  }
-
-  // Validate text fields
-  ["make", "series", "modelNumber", "engine", "auctionLocation"].forEach((field) => {
-    if (!isNonEmptyText(data[field])) {
-      errors[field] = `${field} is required and cannot be empty or just spaces`;
-    } else if (!isNotNumeric(data[field])) {
-      errors[field] = `${field} cannot be purely numeric`;
-    } else if (!hasNoInvalidChars(data[field])) {
-      errors[field] = `${field} cannot contain special characters`;
+    // Validate auctionDate
+    if (!isNonEmptyText(data.auctionDate)) {
+      errors.auctionDate = "Auction date is required";
+    } else if (!isValidDate(data.auctionDate)) {
+      errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
     }
-  });
 
-  // Validate crValue specifically
-  if (!isNonEmptyText(data.crValue)) {
-    errors.crValue = "CR Value is required";
-  } else if (!hasNoInvalidChars(data.crValue)) {
-    errors.crValue = "CR Value cannot contain special characters";
-  }
+    // Validate vehicleYear
+    if (!data.vehicleYear) {
+      errors.vehicleYear = "Vehicle year is required";
+    } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
+      errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
+    }
 
-  if (!isValidColorText(data.color)) {
-  errors.color = "Color should only contain alphabets and spaces (e.g., 'Sky Blue')";
-  }
+    // Validate text fields (excluding optional fields)
+    ["make", "series", "modelNumber", "auctionLocation"].forEach((field) => {
+      if (!isNonEmptyText(data[field])) {
+        errors[field] = `${field} is required and cannot be empty or just spaces`;
+      } else if (!isNotNumeric(data[field])) {
+        errors[field] = `${field} cannot be purely numeric`;
+      } else if (!hasNoInvalidChars(data[field])) {
+        errors[field] = `${field} cannot contain special characters`;
+      }
+    });
 
-  // Validate numeric fields
-  ["odometer", "auctionSalePrice", "jdWholesaleValue", "jdRetailValue","crValue"].forEach(
-    (field) => {
-      if (
-        data[field] === "" ||
-        data[field] === null ||
-        data[field] === undefined
-      ) {
-        errors[field] = `${field} is required`;
-      } else if (!isPositiveNumber(data[field])) {
+    // Validate color only if provided
+    if (data.color !== "" && !isValidColorText(data.color)) {
+      errors.color = "Color should only contain alphabets and spaces (e.g., 'Sky Blue')";
+    }
+
+    // Validate numeric fields (excluding optional fields)
+    ["auctionSalePrice"].forEach((field) => {
+      if (data[field] !== "" && !isPositiveNumber(data[field])) {
         errors[field] = `${field} must be a valid number ≥ 0`;
       }
-    }
-  );
+    });
 
-  return errors;
-};
+    // Optional fields (Model, Engine, Odometer, CR, JD Wholesale, JD Retail) - no validation if empty
+    if (data.engine !== "" && !isNonEmptyText(data.engine)) {
+      errors.engine = "Engine cannot be empty or just spaces if provided";
+    } else if (data.engine && !isNotNumeric(data.engine)) {
+      errors.engine = "Engine cannot be purely numeric";
+    } else if (data.engine && !hasNoInvalidChars(data.engine)) {
+      errors.engine = "Engine cannot contain special characters";
+    }
+
+    if (data.odometer !== "" && !isPositiveNumber(data.odometer)) {
+      errors.odometer = "Odometer must be a valid number ≥ 0";
+    }
+
+    if (data.crValue !== "" && !isNonEmptyText(data.crValue)) {
+      errors.crValue = "CR Value cannot be empty or just spaces if provided";
+    } else if (data.crValue && !hasNoInvalidChars(data.crValue)) {
+      errors.crValue = "CR Value cannot contain special characters";
+    }
+
+    if (data.jdWholesaleValue !== "" && !isPositiveNumber(data.jdWholesaleValue)) {
+      errors.jdWholesaleValue = "JD Wholesale Value must be a valid number ≥ 0";
+    }
+
+    if (data.jdRetailValue !== "" && !isPositiveNumber(data.jdRetailValue)) {
+      errors.jdRetailValue = "JD Retail Value must be a valid number ≥ 0";
+    }
+
+    return errors;
+  };
 
   const [form, setForm] = useState({
     auctionDate: "",
@@ -285,26 +322,27 @@ const validateForm = (data) => {
 
   const handleEditSubmit = async () => {
     const relevantData = {
-      auctionDate: editData.auctionDate,
-      vehicleYear: editData.vehicleYear,
-      make: editData.make,
-      series: editData.series,
-      modelNumber: editData.modelNumber,
-      engine: editData.engine,
-      odometer: editData.odometer,
-      color: editData.color,
-      auctionLocation: editData.auctionLocation,
-      crValue: editData.crValue,
-      auctionSalePrice: editData.auctionSalePrice,
-      jdWholesaleValue: editData.jdWholesaleValue,
-      jdRetailValue: editData.jdRetailValue,
+      auctionDate: editData.auctionDate || "",
+      vehicleYear: editData.vehicleYear || "",
+      make: editData.make || "",
+      series: editData.series || "",
+      modelNumber: editData.modelNumber || "",
+      engine: editData.engine || "",
+      odometer: editData.odometer || "",
+      color: editData.color || "",
+      auctionLocation: editData.auctionLocation || "",
+      crValue: editData.crValue || "",
+      auctionSalePrice: editData.auctionSalePrice || "",
+      jdWholesaleValue: editData.jdWholesaleValue || "",
+      jdRetailValue: editData.jdRetailValue || "",
     };
+    console.log("relevantData:", relevantData); 
     const errors = validateForm(relevantData);
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) {
-    toast.error("Please fix the validation errors before saving.");
-    return;
-  }
+      toast.error("Please fix the validation errors before saving.");
+      return;
+    }
     try {
       const result = await editVehicle(editData);
       if (result.success) {
@@ -327,40 +365,40 @@ const validateForm = (data) => {
   };
 
   const handleDeleteBatch = async () => {
-  if (!deleteBatchId.trim()) {
-    toast.error("Please enter a valid Batch ID.");
-    return;
-  }
-  try {
-    await deleteBulkInsertion(deleteBatchId); // Wait for deletion
-    const updatedList = await listBulkInsertions(); // Fetch updated list
-    setBulkList(updatedList || []); // Update state
-    setDeleteBatchId(""); // Clear the input
-    setShowDeleteModal(false); // Close the delete modal
-    //toast.success("Bulk insertion deleted successfully!");
-    if (updatedList.length === 0) {
-      setShowListModal(false); // Close the list modal if empty
+    if (!deleteBatchId.trim()) {
+      toast.error("Please enter a valid Batch ID.");
+      return;
     }
-  } catch (err) {
-    console.error("Error in handleDeleteBatch:", err);
-    //toast.error("Failed to delete bulk insertion.");
-  }
-};
+    try {
+      await deleteBulkInsertion(deleteBatchId); // Wait for deletion
+      const updatedList = await listBulkInsertions(); // Fetch updated list
+      setBulkList(updatedList || []); // Update state
+      setDeleteBatchId(""); // Clear the input
+      setShowDeleteModal(false); // Close the delete modal
+      //toast.success("Bulk insertion deleted successfully!");
+      if (updatedList.length === 0) {
+        setShowListModal(false); // Close the list modal if empty
+      }
+    } catch (err) {
+      console.error("Error in handleDeleteBatch:", err);
+      //toast.error("Failed to delete bulk insertion.");
+    }
+  };
 
- const handleDeleteBatchFromList = async (batchId) => {
-  try {
-    await deleteBulkInsertion(batchId); // Wait for deletion to complete
-    const updatedList = await listBulkInsertions(); // Fetch the updated list
-    setBulkList(updatedList || []); // Update the state
-    toast.success("Bulk insertion deleted successfully!");
-    if (updatedList.length === 0) {
-      setShowListModal(false); // Close the modal if the list is empty
+  const handleDeleteBatchFromList = async (batchId) => {
+    try {
+      await deleteBulkInsertion(batchId); // Wait for deletion to complete
+      const updatedList = await listBulkInsertions(); // Fetch the updated list
+      setBulkList(updatedList || []); // Update the state
+      toast.success("Bulk insertion deleted successfully!");
+      if (updatedList.length === 0) {
+        setShowListModal(false); // Close the modal if the list is empty
+      }
+    } catch (err) {
+      console.error("Error in handleDeleteBatchFromList:", err);
+      toast.error("Failed to delete bulk insertion.");
     }
-  } catch (err) {
-    console.error("Error in handleDeleteBatchFromList:", err);
-    toast.error("Failed to delete bulk insertion.");
-  }
-};
+  };
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
 
@@ -411,8 +449,8 @@ const validateForm = (data) => {
   }, [vehicleFilters, debouncedFetchVehicles]);
 
   useEffect(() => {
-  console.log("bulkList updated:", bulkList); // Debug log
-}, [bulkList]);
+    console.log("bulkList updated:", bulkList); // Debug log
+  }, [bulkList]);
 
   // Autocomplete suggestion handlers
   const searchYears = (event) => {
@@ -460,10 +498,22 @@ const validateForm = (data) => {
               className="btn add-row"
               onClick={() => setShowAddModal(true)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24">
-  <path d="M12 5v14m7-7H5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
- Add Vehicle
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                fill="white"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M12 5v14m7-7H5"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Add Vehicle
             </button>
             <button
               className="btn upload-csv"
@@ -641,108 +691,109 @@ const validateForm = (data) => {
             </tr>
           </thead>
           <tbody>
-  {vehicleLoading ? (
-    <tr>
-      <td colSpan={isViewer ? 13 : 14}>
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Loading vehicle data...</p>
-          {[...Array(5)].map((_, index) => (
-            <div
-              key={index}
-              style={{
-                display: "flex",
-                gap: "10px",
-                width: "100%",
-                margin: "8px 0",
-              }}
-            >
-              {[...Array(isViewer ? 13 : 14)].map((_, cellIndex) => (
-                <div
-                  key={cellIndex}
-                  className="skeleton-loader"
-                  style={{
-                    height: "30px",
-                    width: "100%",
-                    maxWidth: "100px",
-                  }}
-                ></div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </td>
-    </tr>
-  ) : vehicleData?.length > 0 ? (
-    vehicleData.map((v) => (
-      <tr key={v.id}>
-        <td>{v.auctionDate}</td>
-        <td>{v.vehicleYear}</td>
-        <td>{v.make}</td>
-        <td>{v.series}</td>
-        <td>{v.modelNumber}</td>
-        <td>{v.engine}</td>
-        <td>{v.odometer}</td>
-        <td>{v.color}</td>
-        <td>{v.auctionLocation}</td>
-        <td>{v.crValue}</td>
-        <td>{v.auctionSalePrice}</td>
-        <td>{v.jdWholesaleValue}</td>
-        <td>{v.jdRetailValue}</td>
-        {!isViewer && (
-          <td style={{ display: "flex", gap: "10px" }}>
-            <Tooltip target={`.edit-btn-${v.id}`} />
-            <button
-              className={`icon-btn edit edit-btn-${v.id}`}
-              onClick={() => {
-                setEditData(v);
-                setShowEditModal(true);
-              }}
-              data-pr-tooltip="Edit vehicle"
-              data-pr-position="top"
-            >
-              ✏️
-            </button>
-            <Tooltip target={`.delete-btn-${v.id}`} />
-            <button
-              className={`icon-btn delete delete-btn-${v.id}`}
-              onClick={() => {
-                confirmDialog({
-                  message: "Are you sure you want to delete this vehicle?",
-                  header: "Confirm Deletion",
-                  icon: "pi pi-exclamation-triangle",
-                  acceptClassName: "p-button-danger",
-                  acceptLabel: "Yes, Delete",
-                  rejectLabel: "Cancel",
-                  accept: () => deleteVehicle(v.id),
-                });
-              }}
-              data-pr-tooltip="Delete vehicle"
-              data-pr-position="top"
-            >
-              🗑️
-            </button>
-            <Tooltip target={`.history-btn-${v.id}`} />
-            <button
-              className={`icon-btn history history-btn-${v.id}`}
-              onClick={() => handleRowHistory(v.id)}
-              data-pr-tooltip="View row history"
-              data-pr-position="top"
-            >
-              🕒
-            </button>
-          </td>
-        )}
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
-        No vehicle data found
-      </td>
-    </tr>
-  )}
-</tbody>
+            {vehicleLoading ? (
+              <tr>
+                <td colSpan={isViewer ? 13 : 14}>
+                  <div className="loading-container">
+                    <div className="spinner"></div>
+                    <p>Loading vehicle data...</p>
+                    {[...Array(5)].map((_, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          width: "100%",
+                          margin: "8px 0",
+                        }}
+                      >
+                        {[...Array(isViewer ? 13 : 14)].map((_, cellIndex) => (
+                          <div
+                            key={cellIndex}
+                            className="skeleton-loader"
+                            style={{
+                              height: "30px",
+                              width: "100%",
+                              maxWidth: "100px",
+                            }}
+                          ></div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ) : vehicleData?.length > 0 ? (
+              vehicleData.map((v) => (
+                <tr key={v.id}>
+                  <td>{v.auctionDate}</td>
+                  <td>{v.vehicleYear}</td>
+                  <td>{v.make}</td>
+                  <td>{v.series}</td>
+                  <td>{v.modelNumber}</td>
+                  <td>{v.engine}</td>
+                  <td>{v.odometer}</td>
+                  <td>{v.color}</td>
+                  <td>{v.auctionLocation}</td>
+                  <td>{v.crValue}</td>
+                  <td>{v.auctionSalePrice}</td>
+                  <td>{v.jdWholesaleValue}</td>
+                  <td>{v.jdRetailValue}</td>
+                  {!isViewer && (
+                    <td style={{ display: "flex", gap: "10px" }}>
+                      <Tooltip target={`.edit-btn-${v.id}`} />
+                      <button
+                        className={`icon-btn edit edit-btn-${v.id}`}
+                        onClick={() => {
+                          setEditData(v);
+                          setShowEditModal(true);
+                        }}
+                        data-pr-tooltip="Edit vehicle"
+                        data-pr-position="top"
+                      >
+                        ✏️
+                      </button>
+                      <Tooltip target={`.delete-btn-${v.id}`} />
+                      <button
+                        className={`icon-btn delete delete-btn-${v.id}`}
+                        onClick={() => {
+                          confirmDialog({
+                            message:
+                              "Are you sure you want to delete this vehicle?",
+                            header: "Confirm Deletion",
+                            icon: "pi pi-exclamation-triangle",
+                            acceptClassName: "p-button-danger",
+                            acceptLabel: "Yes, Delete",
+                            rejectLabel: "Cancel",
+                            accept: () => deleteVehicle(v.id),
+                          });
+                        }}
+                        data-pr-tooltip="Delete vehicle"
+                        data-pr-position="top"
+                      >
+                        🗑️
+                      </button>
+                      <Tooltip target={`.history-btn-${v.id}`} />
+                      <button
+                        className={`icon-btn history history-btn-${v.id}`}
+                        onClick={() => handleRowHistory(v.id)}
+                        data-pr-tooltip="View row history"
+                        data-pr-position="top"
+                      >
+                        🕒
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
+                  No vehicle data found
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
         {vehiclePagination ? (
           <div className="pagination-container">
@@ -809,180 +860,174 @@ const validateForm = (data) => {
       {!isViewer && (
         <>
           <Dialog
-  header="Add New Vehicle"
-  visible={showAddModal}
-  style={{ width: "40vw" }}
-  onHide={() => setShowAddModal(false)}
->
-  <div className="add-user-form">
-    {Object.keys(form).map((key) => (
-      <div className="form-group" key={key}>
-        <label style={{ fontWeight: "600", textTransform: "capitalize" }}>
-          {key
-            .replace(/([A-Z])/g, " $1")
-            .trim()
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ")}
-        </label>
-        {key === "auctionDate" ? (
-          <Calendar
-  value={form[key] ? new Date(form[key]) : null}
-  onChange={(e) => {
-    const date = e.value;
-    setForm({
-      ...form,
-      [key]: date ? date.toISOString().split("T")[0] : "",
-    });
-  }}
-  dateFormat="yy-mm-dd"
-  showIcon
-  icon="pi pi-calendar" // Use PrimeReact's calendar icon
-  inputClassName="p-inputtext"
-  style={{ width: "100%" }}
-/>
-        ) : (
-          <InputText
-            type={
-              key.includes("Date")
-                ? "date"
-                : key.match(/Price|Value|odometer|Year/)
-                ? "number"
-                : "text"
-            }
-            value={form[key]}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (
-                key.match(/Price|Value|odometer|Year/) &&
-                Number(val) < 0
-              )
-                return;
-              setForm({ ...form, [key]: val });
-            }}
-            min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
-          />
-        )}
-        {formErrors[key] && (
-          <small style={{ color: "red" }}>{formErrors[key]}</small>
-        )}
-      </div>
-    ))}
-    <Button
-      label="Save"
-      className="btn save"
-      onClick={handleAddSubmit}
-    />
-  </div>
-</Dialog>
-          <Dialog
-  header="✏️ Edit Vehicle Details"
-  visible={showEditModal}
-  style={{ width: "45vw", maxWidth: "700px" }}
-  onHide={() => setShowEditModal(false)}
->
-  {editData && (
-    <div
-      className="edit-vehicle-form"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "1rem",
-        padding: "10px 0",
-      }}
-    >
-      {editableFields.map((key) => (
-        <div
-          key={key}
-          style={{ display: "flex", flexDirection: "column" }}
-        >
-          <label
-            style={{
-              fontWeight: "600",
-              textTransform: "capitalize",
-              marginBottom: "4px",
-            }}
+            header="Add New Vehicle"
+            visible={showAddModal}
+            style={{ width: "40vw" }}
+            onHide={() => setShowAddModal(false)}
           >
-            {key.replace(/([A-Z])/g, " $1")}
-          </label>
-          {key === "auctionDate" ? (
-            <Calendar
-              value={editData[key] ? new Date(editData[key]) : null}
-              onChange={(e) => {
-                const date = e.value;
-                setEditData({
-                  ...editData,
-                  [key]: date ? date.toISOString().split("T")[0] : "",
-                });
-              }}
-              dateFormat="yy-mm-dd"
-              showIcon
-              inputClassName="p-inputtext"
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-                width: "100%",
-              }}
-            />
-          ) : (
-            <InputText
-              type={
-                key.includes("Date")
-                  ? "date"
-                  : key.match(/Price|Value|odometer|Year/)
-                  ? "number"
-                  : "text"
-              }
-              value={editData[key] || ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (
-                  key.match(/Price|Value|odometer|Year/) &&
-                  Number(val) < 0
-                )
-                  return;
-                setEditData({ ...editData, [key]: val });
-              }}
-              min={
-                key.match(/Price|Value|odometer|Year/) ? 0 : undefined
-              }
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-              }}
-            />
-          )}
-          {formErrors[key] && (
-            <small style={{ color: "red", marginTop: "4px" }}>
-              {formErrors[key]}
-            </small>
-          )}
-        </div>
-      ))}
-      <div
-        style={{
-          gridColumn: "1 / -1",
-          textAlign: "right",
-          marginTop: "1.5rem",
-        }}
-      >
-        <Button
-          label="Update Vehicle"
-          icon="pi pi-check"
-          className="p-button-success"
-          onClick={handleEditSubmit}
-          style={{
-            padding: "8px 20px",
-            fontWeight: "600",
-            borderRadius: "8px",
-          }}
-        />
-      </div>
-    </div>
-  )}
-</Dialog>
+            <div className="add-user-form">
+              {Object.keys(form).map((key) => (
+                <div className="form-group" key={key}>
+                  <label style={{ fontWeight: "600" }}>
+                    {getProperLabel(key)}
+                  </label>
+                  {key === "auctionDate" ? (
+                    <Calendar
+                      value={form[key] ? new Date(form[key]) : null}
+                      onChange={(e) => {
+                        const date = e.value;
+                        setForm({
+                          ...form,
+                          [key]: date ? date.toISOString().split("T")[0] : "",
+                        });
+                      }}
+                      dateFormat="yy-mm-dd"
+                      showIcon
+                      icon="pi pi-calendar"
+                      inputClassName="p-inputtext"
+                      style={{ width: "100%" }}
+                    />
+                  ) : (
+                    <InputText
+                      type={
+                        key.includes("Date")
+                          ? "date"
+                          : key.match(/Price|Value|odometer|Year/)
+                          ? "number"
+                          : "text"
+                      }
+                      value={form[key]}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (
+                          key.match(/Price|Value|odometer|Year/) &&
+                          Number(val) < 0
+                        )
+                          return;
+                        setForm({ ...form, [key]: val });
+                      }}
+                      min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+                    />
+                  )}
+                  {formErrors[key] && (
+                    <small style={{ color: "red" }}>{formErrors[key]}</small>
+                  )}
+                </div>
+              ))}
+              <Button
+                label="Save"
+                className="btn save"
+                onClick={handleAddSubmit}
+              />
+            </div>
+          </Dialog>
+          <Dialog
+            header="✏️ Edit Vehicle Details"
+            visible={showEditModal}
+            style={{ width: "45vw", maxWidth: "700px" }}
+            onHide={() => setShowEditModal(false)}
+          >
+            {editData && (
+              <div
+                className="edit-vehicle-form"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                  padding: "10px 0",
+                }}
+              >
+                {editableFields.map((key) => (
+                  <div
+                    key={key}
+                    style={{ display: "flex", flexDirection: "column" }}
+                  >
+                    <label
+                      style={{
+                        fontWeight: "600",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {getProperLabel(key)}
+                    </label>
+                    {key === "auctionDate" ? (
+                      <Calendar
+                        value={editData[key] ? new Date(editData[key]) : null}
+                        onChange={(e) => {
+                          const date = e.value;
+                          setEditData({
+                            ...editData,
+                            [key]: date ? date.toISOString().split("T")[0] : "",
+                          });
+                        }}
+                        dateFormat="yy-mm-dd"
+                        showIcon
+                        inputClassName="p-inputtext"
+                        style={{
+                          padding: "8px",
+                          borderRadius: "6px",
+                          border: "1px solid #ccc",
+                          width: "100%",
+                        }}
+                      />
+                    ) : (
+                      <InputText
+                        type={
+                          key.includes("Date")
+                            ? "date"
+                            : key.match(/Price|Value|odometer|Year/)
+                            ? "number"
+                            : "text"
+                        }
+                        value={editData[key] || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (
+                            key.match(/Price|Value|odometer|Year/) &&
+                            Number(val) < 0
+                          )
+                            return;
+                          setEditData({ ...editData, [key]: val });
+                        }}
+                        min={
+                          key.match(/Price|Value|odometer|Year/) ? 0 : undefined
+                        }
+                        style={{
+                          padding: "8px",
+                          borderRadius: "6px",
+                          border: "1px solid #ccc",
+                        }}
+                      />
+                    )}
+                    {formErrors[key] && (
+                      <small style={{ color: "red", marginTop: "4px" }}>
+                        {formErrors[key]}
+                      </small>
+                    )}
+                  </div>
+                ))}
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    textAlign: "right",
+                    marginTop: "1.5rem",
+                  }}
+                >
+                  <Button
+                    label="Update Vehicle"
+                    icon="pi pi-check"
+                    className="p-button-success"
+                    onClick={handleEditSubmit}
+                    style={{
+                      padding: "8px 20px",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </Dialog>
           <Dialog
             header="📋 Bulk Insertions"
             visible={showListModal}
