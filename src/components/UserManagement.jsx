@@ -514,25 +514,30 @@ const handleAddUser = async () => {
           )}
         </td>
         <td>
-          {editingRowId === u.id ? (
-            <select
-              value={editedUser.role}
-              onChange={(e) =>
-                setEditedUser({ ...editedUser, role: e.target.value })
-              }
-              className={errors.role ? "p-invalid" : ""}
-            >
-              <option value="admin">Admin</option>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
-            </select>
-          ) : (
-            u.role
-          )}
-          {editingRowId === u.id && errors.role && (
-            <small className="error-text">{errors.role}</small>
-          )}
-        </td>
+  {editingRowId === u.id ? (
+    <select
+      value={editedUser.role}
+      onChange={(e) =>
+        setEditedUser({ ...editedUser, role: e.target.value })
+      }
+      className={errors.role ? "p-invalid" : ""}
+    >
+      <option value="admin">Admin</option>
+      <option value="editor">Editor</option>
+      <option value="viewer">Viewer</option>
+    </select>
+  ) : (
+    // Capitalize and sanitize role
+    <span>
+      {u.role
+        ? u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase()
+        : "Unknown"}
+    </span>
+  )}
+  {editingRowId === u.id && errors.role && (
+    <small className="error-text">{errors.role}</small>
+  )}
+</td>
         <td>
           {editingRowId === u.id
             ? u.status === "deleted"
