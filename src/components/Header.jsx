@@ -45,7 +45,7 @@ const Header = () => {
   return (
     <header className="header-bar">
       <div className="user-info">
-        <span>{user.name || "Guest"}</span> | <span>{user.role || "No Role"}</span>
+        <span>{user.name || "Guest"}</span> | <span> Role: {user.role || "No Role"}</span>
       </div>
       <div className="header-actions">
         <button className="btn logout" onClick={handleLogout}>

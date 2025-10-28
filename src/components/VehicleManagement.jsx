@@ -9,6 +9,24 @@ import { confirmDialog } from "primereact/confirmdialog";
 import { Calendar } from "primereact/calendar";
 import "./VehicleManagement.css";
 
+const MAX_VALUES = {
+  vehicleYear: 2099,       
+  odometer: 999999,      
+  crValue: 999999,          
+  auctionSalePrice: 9999999, 
+  jdWholesaleValue: 9999999,
+  jdRetailValue: 9999999,
+};
+
+const toTitleCase = (str) => {
+  if (!str) return "";
+  return str
+    .trim()
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+};
+
 const debounce = (func, wait) => {
   let timeout;
   return (...args) => {
@@ -80,24 +98,15 @@ const VehicleManagement = ({
 
   useEffect(() => {
     if (fullVehicleData && fullVehicleData.length > 0) {
-      const uniqueYears = [
-        ...new Set(fullVehicleData.map((v) => v.vehicleYear).filter(Boolean)),
-      ].sort();
-      const uniqueMakes = [
-        ...new Set(fullVehicleData.map((v) => v.make).filter(Boolean)),
-      ].sort();
-      const uniqueLocations = [
-        ...new Set(
-          fullVehicleData.map((v) => v.auctionLocation).filter(Boolean)
-        ),
-      ].sort();
-      const uniqueModels = [
-        ...new Set(fullVehicleData.map((v) => v.modelNumber).filter(Boolean)),
-      ].sort();
-      setYearSuggestions(uniqueYears);
-      setMakeSuggestions(uniqueMakes);
-      setLocationSuggestions(uniqueLocations);
-      setModelSuggestions(uniqueModels);
+      const normalize = (arr) =>
+        [...new Set(arr.filter(Boolean).map(String))].map(toTitleCase).sort();
+
+      setYearSuggestions(normalize(fullVehicleData.map((v) => v.vehicleYear)));
+      setMakeSuggestions(normalize(fullVehicleData.map((v) => v.make)));
+      setLocationSuggestions(
+        normalize(fullVehicleData.map((v) => v.auctionLocation))
+      );
+      setModelSuggestions(normalize(fullVehicleData.map((v) => v.modelNumber)));
     }
   }, [fullVehicleData]);
 
@@ -133,12 +142,15 @@ const VehicleManagement = ({
       jdWholesaleValue: "JD Wholesale Value",
       jdRetailValue: "JD Retail Value",
     };
-    return labelMap[key] || key
-      .replace(/([A-Z])/g, " $1")
-      .trim()
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+    return (
+      labelMap[key] ||
+      key
+        .replace(/([A-Z])/g, " $1")
+        .trim()
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+    );
   };
 
 const validateForm = (data) => {
@@ -160,21 +172,23 @@ const validateForm = (data) => {
     typeof val === "string" &&
     /^[a-zA-Z\s]+$/.test(val.trim()) && val.trim().length > 0;
 
-  // Validate auctionDate
+  // ── Auction Date ──
   if (!isNonEmptyText(data.auctionDate)) {
     errors.auctionDate = "Auction date is required";
   } else if (!isValidDate(data.auctionDate)) {
     errors.auctionDate = "Enter a valid date (YYYY-MM-DD)";
   }
 
-  // Validate vehicleYear
+  // ── Vehicle Year ──
   if (!data.vehicleYear) {
     errors.vehicleYear = "Vehicle year is required";
   } else if (!/^(19|20)\d{2}$/.test(data.vehicleYear)) {
     errors.vehicleYear = "Enter a valid 4-digit year (1900–2099)";
+  } else if (Number(data.vehicleYear) > MAX_VALUES.vehicleYear) {
+    errors.vehicleYear = `Year cannot exceed ${MAX_VALUES.vehicleYear}`;
   }
 
-  // Validate required text fields
+  // ── Required Text Fields ──
   ["make", "series", "auctionLocation"].forEach((field) => {
     if (!isNonEmptyText(data[field])) {
       errors[field] = `${getProperLabel(field)} is required and cannot be empty or just spaces`;
@@ -185,53 +199,52 @@ const validateForm = (data) => {
     }
   });
 
-  // Validate crValue as required with no special characters (allowing numeric)
+  // ── CR Value (required, 6 digits max) ──
   if (!isNonEmptyText(data.crValue)) {
     errors.crValue = `${getProperLabel("crValue")} is required and cannot be empty or just spaces`;
   } else if (!hasNoInvalidChars(data.crValue)) {
     errors.crValue = `${getProperLabel("crValue")} cannot contain special characters`;
+  } else if (!isPositiveNumber(data.crValue)) {
+    errors.crValue = `${getProperLabel("crValue")} must be a valid number ≥ 0`;
+  } else if (Number(data.crValue) > MAX_VALUES.crValue) {
+    errors.crValue = `${getProperLabel("crValue")} cannot exceed ${MAX_VALUES.crValue}`;
   }
 
-  // Validate required numeric fields
+  // ── Required Numeric Fields ──
   ["auctionSalePrice"].forEach((field) => {
     if (!isNonEmptyText(data[field])) {
       errors[field] = `${getProperLabel(field)} is required and cannot be empty or just spaces`;
     } else if (!isPositiveNumber(data[field])) {
       errors[field] = `${getProperLabel(field)} must be a valid number ≥ 0`;
+    } else if (Number(data[field]) > MAX_VALUES[field]) {
+      errors[field] = `${getProperLabel(field)} cannot exceed ${MAX_VALUES[field]}`;
     }
   });
 
-  // Optional fields - validation only if provided
-  if (data.modelNumber !== "" && !isNonEmptyText(data.modelNumber)) {
-    errors.modelNumber = "Model # cannot be empty or just spaces if provided";
-  } else if (data.modelNumber && !isNotNumeric(data.modelNumber)) {
-    errors.modelNumber = "Model # cannot be purely numeric";
-  } else if (data.modelNumber && !hasNoInvalidChars(data.modelNumber)) {
-    errors.modelNumber = "Model # cannot contain special characters";
-  }
+  // ── Optional Numeric Fields ──
+  const optionalNumeric = ["odometer", "jdWholesaleValue", "jdRetailValue"];
+  optionalNumeric.forEach((field) => {
+    if (data[field] !== "" && !isPositiveNumber(data[field])) {
+      errors[field] = `${getProperLabel(field)} must be a valid number ≥ 0`;
+    } else if (data[field] !== "" && Number(data[field]) > MAX_VALUES[field]) {
+      errors[field] = `${getProperLabel(field)} cannot exceed ${MAX_VALUES[field]}`;
+    }
+  });
 
-  if (data.engine !== "" && !isNonEmptyText(data.engine)) {
-    errors.engine = "Engine cannot be empty or just spaces if provided";
-  } else if (data.engine && !isNotNumeric(data.engine)) {
-    errors.engine = "Engine cannot be purely numeric";
-  } else if (data.engine && !hasNoInvalidChars(data.engine)) {
-    errors.engine = "Engine cannot contain special characters";
-  }
+  // ── Optional Text Fields (modelNumber, engine) ──
+  ["modelNumber", "engine"].forEach((field) => {
+    if (data[field] !== "" && !isNonEmptyText(data[field])) {
+      errors[field] = `${getProperLabel(field)} cannot be empty or just spaces if provided`;
+    } else if (data[field] && !isNotNumeric(data[field])) {
+      errors[field] = `${getProperLabel(field)} cannot be purely numeric`;
+    } else if (data[field] && !hasNoInvalidChars(data[field])) {
+      errors[field] = `${getProperLabel(field)} cannot contain special characters`;
+    }
+  });
 
-  if (data.odometer !== "" && !isPositiveNumber(data.odometer)) {
-    errors.odometer = "Odometer must be a valid number ≥ 0";
-  }
-
+  // ── Color ──
   if (data.color !== "" && !isValidColorText(data.color)) {
     errors.color = "Color should only contain alphabets and spaces (e.g., 'Sky Blue')";
-  }
-
-  if (data.jdWholesaleValue !== "" && !isPositiveNumber(data.jdWholesaleValue)) {
-    errors.jdWholesaleValue = "JD Wholesale Value must be a valid number ≥ 0";
-  }
-
-  if (data.jdRetailValue !== "" && !isPositiveNumber(data.jdRetailValue)) {
-    errors.jdRetailValue = "JD Retail Value must be a valid number ≥ 0";
   }
 
   return errors;
@@ -346,7 +359,7 @@ const validateForm = (data) => {
       jdWholesaleValue: editData.jdWholesaleValue || "",
       jdRetailValue: editData.jdRetailValue || "",
     };
-    console.log("relevantData:", relevantData); 
+    console.log("relevantData:", relevantData);
     const errors = validateForm(relevantData);
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) {
@@ -597,7 +610,7 @@ const validateForm = (data) => {
                   page: 1,
                 })
               }
-              placeholder="Search Years"
+              placeholder="Search year"
               style={{ width: "180px" }}
               inputStyle={{ width: "100%" }}
               dropdown
@@ -613,7 +626,7 @@ const validateForm = (data) => {
                   page: 1,
                 })
               }
-              placeholder="Search Makes"
+              placeholder="Search make"
               style={{ width: "180px" }}
               inputStyle={{ width: "100%" }}
               dropdown
@@ -629,7 +642,7 @@ const validateForm = (data) => {
                   page: 1,
                 })
               }
-              placeholder="Search Locations"
+              placeholder="Search location"
               style={{ width: "180px" }}
               inputStyle={{ width: "100%" }}
               dropdown
@@ -645,7 +658,7 @@ const validateForm = (data) => {
                   page: 1,
                 })
               }
-              placeholder="Search Models"
+              placeholder="Search model"
               style={{ width: "180px" }}
               inputStyle={{ width: "100%" }}
               dropdown
@@ -738,13 +751,13 @@ const validateForm = (data) => {
                 <tr key={v.id}>
                   <td>{v.auctionDate}</td>
                   <td>{v.vehicleYear}</td>
-                  <td>{v.make}</td>
-                  <td>{v.series}</td>
-                  <td>{v.modelNumber}</td>
-                  <td>{v.engine}</td>
+                  <td>{toTitleCase(v.make)}</td>
+                  <td>{toTitleCase(v.series)}</td>
+                  <td>{toTitleCase(v.modelNumber)}</td>
+                  <td>{toTitleCase(v.engine)}</td>
                   <td>{v.odometer}</td>
                   <td>{v.color}</td>
-                  <td>{v.auctionLocation}</td>
+                 <td>{toTitleCase(v.auctionLocation)}</td>
                   <td>{v.crValue}</td>
                   <td>{v.auctionSalePrice}</td>
                   <td>{v.jdWholesaleValue}</td>
@@ -798,7 +811,10 @@ const validateForm = (data) => {
               ))
             ) : (
               <tr>
-                <td colSpan={isViewer ? 13 : 14} style={{ textAlign: "center" }}>
+                <td
+                  colSpan={isViewer ? 13 : 14}
+                  style={{ textAlign: "center" }}
+                >
                   No vehicle data found
                 </td>
               </tr>
@@ -899,25 +915,25 @@ const validateForm = (data) => {
                     />
                   ) : (
                     <InputText
-                      type={
-                        key.includes("Date")
-                          ? "date"
-                          : key.match(/Price|Value|odometer|Year/)
-                          ? "number"
-                          : "text"
-                      }
-                      value={form[key]}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (
-                          key.match(/Price|Value|odometer|Year/) &&
-                          Number(val) < 0
-                        )
-                          return;
-                        setForm({ ...form, [key]: val });
-                      }}
-                      min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
-                    />
+  type={key.includes("Date") ? "date" : key.match(/Price|Value|odometer|Year/) ? "number" : "text"}
+  value={form[key]}
+  onChange={(e) => {
+    let val = e.target.value;
+
+    // Enforce max length for number fields
+    if (key.match(/Price|Value|odometer|Year/) && val !== "") {
+      const num = Number(val);
+      if (num < 0) return;
+      if (num > (MAX_VALUES[key] || 9999999)) {
+        val = MAX_VALUES[key] || 9999999;
+      }
+    }
+
+    setForm({ ...form, [key]: val });
+  }}
+  max={key.match(/Price|Value|odometer|Year/) ? MAX_VALUES[key] || 9999999 : undefined}
+  min={key.match(/Price|Value|odometer|Year/) ? 0 : undefined}
+/>
                   )}
                   {formErrors[key] && (
                     <small style={{ color: "red" }}>{formErrors[key]}</small>
