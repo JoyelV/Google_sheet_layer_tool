@@ -61,7 +61,7 @@ const UserManagement = ({
     { label: "Viewer", value: "viewer" },
   ];
   const statusOptions = [
-    { label: "All Statuses", value: "" },
+    { label: "All Status", value: "" },
     { label: "Active", value: "active" },
     { label: "Blocked", value: "blocked" },
     { label: "Deleted", value: "deleted" },
@@ -409,7 +409,7 @@ const handleAddUser = async () => {
         <h1 className="section-title">User Management</h1>
         <div
           className="action-button"
-          style={{ display: "flex", gap: "10px", alignItems: "center" }}
+          style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}
         >
           <InputText
             placeholder="Search by user name..."
