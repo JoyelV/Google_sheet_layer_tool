@@ -29,7 +29,7 @@ const Sidebar = ({ activeTab, setActiveTab, role }) => {
       {/* Sidebar */}
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
-          <h2>Admin Dashboard</h2>
+          <h2>Dashboard</h2>
         </div>
         <nav>
           <ul>
