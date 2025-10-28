@@ -107,8 +107,8 @@
 .hamburger-menu {
   display: none;
   position: fixed;
-  top: 28px;
-  left: 20px;
+  top: 33px;
+  left: 10px;
   z-index: 2001;
   background-color: #0f172a;
   color: white;
@@ -278,10 +278,10 @@
   }
 }
 
-@media (max-width: 425px) {
+@media (max-width: 450px) {
   .hamburger-menu {
-    top: 28px;
-    left: 10px;
-    padding: 6px;
+    top: 42px;
+    left: 8px;
+    padding: 4px;
   }
 }
